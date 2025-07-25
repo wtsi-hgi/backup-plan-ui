@@ -1,0 +1,18 @@
+<tr>
+    <td>{{.ReportingName}}</td>
+    <td>{{.ReportingRoot}}</td>
+    <td>{{.Directory}}</td>
+    <td>{{.Instruction}}</td>
+    <td>{{.Match}}</td>
+    <td>{{.Ignore}}</td>
+    <td>{{.Requestor}}</td>
+    <td>{{.Faculty}}</td>
+    <td>
+      <button class="btn danger" 
+            hx-get="/actions/edit/{{.ID}}" 
+            hx-target="closest tr" 
+            hx-swap="outerHTML">
+        Edit
+      </button>
+    </td>
+  </tr>

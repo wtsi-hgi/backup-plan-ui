@@ -1,0 +1,42 @@
+<tr hx-trigger='cancel' 
+    class='editing' 
+    hx-get="/actions"
+    hx-target="closest tr" 
+    hx-swap="outerHTML">
+    <td>
+        <input autofocus name='ReportingName' value="{{.ReportingName}}">
+    </td>
+    <td>
+        <input name='ReportingRoot' value="{{.ReportingRoot}}">
+    </td>
+    <td>
+        <input name='Directory' value="{{.Directory}}">
+    </td>
+    <td>
+        <input name='Instruction' value="{{.Instruction}}">
+    </td>
+    <td>
+        <input name='Match' value="{{.Match}}">
+    </td>
+    <td>
+        <input name='Ignore' value="{{.Ignore}}">
+    </td>
+    <td>
+        <input name='Requestor' value="{{.Requestor}}">
+    </td>
+    <td>
+        <input name='Faculty' value="{{.Faculty}}">
+    </td>
+    <td>
+        <button class="btn danger" 
+            hx-get="/actions/cancel/{{.ID}}">
+            Cancel
+        </button>
+        <button class="btn danger" 
+            hx-put="/actions/submit/{{.ID}}"
+            hx-include="closest tr">
+            Save
+        </button>
+    </td>
+  </tr>
+  

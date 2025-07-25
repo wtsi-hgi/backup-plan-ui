@@ -1,0 +1,3 @@
+reporting_name,reporting_root,directory,instruction,match,ignore,requestor,faculty
+test_project,/path/to/project,/path/to/project/input,backup,,,user,group
+test_project,/path/to/project,/path/to/project/output,nobackup,,,user,group
