@@ -7,7 +7,6 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/go-chi/chi/middleware"
 	"github.com/go-chi/chi/v5"
 )
 
@@ -47,11 +46,6 @@ func main() {
 
 	r := chi.NewRouter()
 
-	// ✅ Helpful middleware
-	r.Use(middleware.Logger)    // Log each request
-	r.Use(middleware.Recoverer) // Recover from panics
-
-	// ✅ Routes
 	r.Get("/", serveHome)
 	r.Get("/hello", sayHello)
 	r.Get("/models", models)
@@ -62,11 +56,8 @@ func main() {
 	r.Get("/actions/cancel/{id}", server.resetView)
 	r.Get("/actions/delete/{id}", server.deleteRow)
 
-	// ✅ Static files
 	r.Handle("/static/*", http.StripPrefix("/static/", http.FileServer(http.Dir("./static"))))
 
-	// ✅ Start server
-	fmt.Println("Starting server on http://localhost:4000")
 	if err := http.ListenAndServe(":4000", r); err != nil {
 		log.Fatalf("Server failed to start: %v", err)
 	}
@@ -75,7 +66,6 @@ func main() {
 func serveHome(w http.ResponseWriter, r *http.Request) {
 	if err := tmpl.Execute(w, nil); err != nil {
 		http.Error(w, "Template rendering failed", http.StatusInternalServerError)
-		log.Println("Template error:", err)
 	}
 }
 
