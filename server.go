@@ -14,13 +14,20 @@ type server struct {
 }
 
 var (
-	tmplRow = template.Must(template.New("row.html").Funcs(template.FuncMap{
-		"join": joinCommaSpace,
-	}).ParseFiles("templates/row.html"))
-	tmplEditRow = template.Must(template.New("edit_row.html").Funcs(template.FuncMap{
-		"join": joinCommaSpace,
-	}).ParseFiles("templates/edit_row.html"))
+	tmplRow     = parseTemplate("row.html")
+	tmplEditRow = parseTemplate("edit_row.html")
 )
+
+const templateDir = "templates/"
+
+func parseTemplate(name string) *template.Template {
+	return template.Must(
+		template.New(name).
+			Funcs(template.FuncMap{
+				"join": joinCommaSpace,
+			}).
+			ParseFiles(templateDir + name))
+}
 
 func joinCommaSpace(items []string) string {
 	return strings.Join(items, ", ")

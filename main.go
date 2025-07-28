@@ -3,9 +3,11 @@ package main
 import (
 	"fmt"
 	"html/template"
+	"log"
 	"net/http"
 	"os"
 
+	"github.com/go-chi/chi/middleware"
 	"github.com/go-chi/chi/v5"
 )
 
@@ -33,18 +35,23 @@ var tmpl = template.Must(template.ParseFiles("templates/index.html"))
 
 func main() {
 	if len(os.Args) != 2 {
-		fmt.Println("You should provide a path to a database")
+		fmt.Println("Usage: go run . <path-to-csv>")
 		os.Exit(1)
 	}
 
 	dbPath := os.Args[1]
+	fmt.Println("Using database:", dbPath)
 
-	var db DataSource
-	db = CSVSource{dbPath}
+	var db DataSource = CSVSource{dbPath}
 	server := server{db: db}
 
 	r := chi.NewRouter()
 
+	// ✅ Helpful middleware
+	r.Use(middleware.Logger)    // Log each request
+	r.Use(middleware.Recoverer) // Recover from panics
+
+	// ✅ Routes
 	r.Get("/", serveHome)
 	r.Get("/hello", sayHello)
 	r.Get("/models", models)
@@ -55,13 +62,21 @@ func main() {
 	r.Get("/actions/cancel/{id}", server.resetView)
 	r.Get("/actions/delete/{id}", server.deleteRow)
 
+	// ✅ Static files
 	r.Handle("/static/*", http.StripPrefix("/static/", http.FileServer(http.Dir("./static"))))
 
-	http.ListenAndServe(":4000", r)
+	// ✅ Start server
+	fmt.Println("Starting server on http://localhost:4000")
+	if err := http.ListenAndServe(":4000", r); err != nil {
+		log.Fatalf("Server failed to start: %v", err)
+	}
 }
 
 func serveHome(w http.ResponseWriter, r *http.Request) {
-	tmpl.Execute(w, nil)
+	if err := tmpl.Execute(w, nil); err != nil {
+		http.Error(w, "Template rendering failed", http.StatusInternalServerError)
+		log.Println("Template error:", err)
+	}
 }
 
 func sayHello(w http.ResponseWriter, r *http.Request) {
