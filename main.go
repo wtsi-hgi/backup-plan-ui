@@ -41,8 +41,9 @@ func main() {
 	dbPath := os.Args[1]
 	fmt.Println("Using database:", dbPath)
 
-	var db DataSource = CSVSource{dbPath}
-	server := server{db: db}
+	server := server{
+		db: CSVSource{dbPath},
+	}
 
 	r := chi.NewRouter()
 
@@ -55,6 +56,8 @@ func main() {
 	r.Put("/actions/submit/{id}", server.submitEdits)
 	r.Get("/actions/cancel/{id}", server.resetView)
 	r.Get("/actions/delete/{id}", server.deleteRow)
+	r.Get("/actions/add", server.showAddRowForm)
+	r.Put("/actions/add", server.addNewEntry)
 
 	r.Handle("/static/*", http.StripPrefix("/static/", http.FileServer(http.Dir("./static"))))
 

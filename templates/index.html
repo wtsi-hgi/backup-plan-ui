@@ -7,7 +7,7 @@
     <script src="https://unpkg.com/htmx.org@1.9.12"></script>
 </head>
 <body>
-    <h1>HTMX awfawf Go</h1>
+    <h1>HumGen and GenGen backup plan</h1>
 
     <button hx-get="/hello" hx-target="#response" hx-swap="innerHTML">
         Say Hello
@@ -31,25 +31,39 @@
         </select>
     </div>
 
-    <table class="table delete-row-example">
-      <thead>
-        <tr>
-          <th>Reporting name</th>
-          <th>Reporting root</th>
-          <th>Directory</th>
-          <th>Instruction</th>
-          <th>Match</th>
-          <th>Ignore</th>
-          <th>Requestor</th>
-          <th>Faculty</th>
-        </tr>
-      </thead>
-        <tbody 
-            hx-get="/entries" 
-            hx-trigger="load" 
-            hx-target="this" 
-            hx-swap="innerHTML">
-        </tbody>
-    </table>
+    <div class="table-container">
+        <div class="table-actions">
+            <button class="btn"
+                    hx-get="/actions/add"
+                    hx-target="#add-row-container"
+                    hx-swap="innerHTML">
+                Add Row
+            </button>
+        </div>
+        
+        <div id="add-row-container"></div>
+        
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Reporting name</th>
+              <th>Reporting root</th>
+              <th>Directory</th>
+              <th>Instruction</th>
+              <th>Match</th>
+              <th>Ignore</th>
+              <th>Requestor</th>
+              <th>Faculty</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+            <tbody 
+                hx-get="/entries" 
+                hx-trigger="load, entriesChanged from:body"
+                hx-target="this" 
+                hx-swap="innerHTML">
+            </tbody>
+        </table>
+    </div>
 </body>
 </html>

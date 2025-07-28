@@ -16,6 +16,7 @@ type server struct {
 var (
 	tmplRow     = parseTemplate("row.html")
 	tmplEditRow = parseTemplate("edit_row.html")
+	tmplAddRow  = parseTemplate("templates/add_row.html")
 )
 
 const templateDir = "templates/"
@@ -69,6 +70,12 @@ func (s server) changeTemplate(w http.ResponseWriter, r *http.Request, tmpl *tem
 }
 
 func (s server) resetView(w http.ResponseWriter, r *http.Request) {
+	idStr := chi.URLParam(r, "id")
+
+	if idStr == "new" {
+		_, _ = w.Write([]byte(""))
+		return
+	}
 	err := s.changeTemplate(w, r, tmplRow)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -141,4 +148,54 @@ func (s server) deleteRow(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 	}
+}
+
+func (s server) showAddRowForm(w http.ResponseWriter, r *http.Request) {
+	err := tmplAddRow.Execute(w, nil)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
+}
+
+func (s server) addNewEntry(w http.ResponseWriter, r *http.Request) {
+	err := r.ParseForm()
+	if err != nil {
+		http.Error(w, "Failed to parse form", http.StatusBadRequest)
+		return
+	}
+
+	newEntry := &Entry{
+		ReportingName: r.FormValue("ReportingName"),
+		ReportingRoot: r.FormValue("ReportingRoot"),
+		Directory:     r.FormValue("Directory"),
+		Instruction:   instruction(r.FormValue("Instruction")),
+		Requestor:     r.FormValue("Requestor"),
+		Faculty:       r.FormValue("Faculty"),
+	}
+
+	// Handle arrays (simplified for now)
+	match := r.FormValue("Match")
+	if match != "" {
+		newEntry.Match = []string{match}
+	} else {
+		newEntry.Match = []string{}
+	}
+
+	ignore := r.FormValue("Ignore")
+	if ignore != "" {
+		newEntry.Ignore = []string{ignore}
+	} else {
+		newEntry.Ignore = []string{}
+	}
+
+	err = s.db.addEntry(newEntry)
+	if err != nil {
+		http.Error(w, "Failed to add entry: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Set HX-Trigger to refresh the entry table
+	w.Header().Set("HX-Trigger", "entriesChanged")
+
+	_, _ = w.Write([]byte(""))
 }

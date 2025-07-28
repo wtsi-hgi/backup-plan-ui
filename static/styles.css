@@ -33,3 +33,47 @@ button {
 button:hover {
     background-color: #2980b9;
 }
+
+/* Table container and actions */
+.table-container {
+    margin-top: 20px;
+}
+
+.table-actions {
+    margin-bottom: 15px;
+    display: flex;
+    justify-content: center;
+}
+
+.btn.primary {
+    background-color: #27ae60;
+}
+
+.btn.primary:hover {
+    background-color: #219955;
+}
+
+.btn.danger {
+    background-color: #e74c3c;
+}
+
+.btn.danger:hover {
+    background-color: #c0392b;
+}
+
+/* Add row form */
+#add-row-container {
+    margin-bottom: 20px;
+}
+
+/* Edit row styling */
+tr.editing {
+    background-color: #f2f9ff;
+}
+
+.editing input {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+}

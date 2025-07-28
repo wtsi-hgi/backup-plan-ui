@@ -12,6 +12,7 @@ type DataSource interface {
 	getEntry(id uint16) (*Entry, error)
 	updateEntry(newEntry *Entry) error
 	deleteEntry(id uint16) error
+	addEntry(entry *Entry) error
 }
 
 type CSVSource struct {
@@ -97,4 +98,27 @@ func (c CSVSource) deleteEntry(id uint16) error {
 	entries = append(entries[:index], entries[index+1:]...)
 
 	return c.writeEntries(entries)
+}
+
+func (c CSVSource) addEntry(newEntry *Entry) error {
+	entries, err := c.readAll()
+	if err != nil {
+		return err
+	}
+
+	newEntry.ID = uint16(len(entries))
+
+	entries = append(entries, newEntry)
+
+	return c.writeAll(entries)
+}
+
+func (c CSVSource) writeAll(entries []*Entry) error {
+	file, err := os.Create(c.path)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	return gocsv.MarshalFile(entries, file)
 }

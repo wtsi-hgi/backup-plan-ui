@@ -2,7 +2,9 @@ package main
 
 import (
 	"fmt"
+	"io"
 	"os"
+	"path/filepath"
 	"reflect"
 	"testing"
 
@@ -10,6 +12,36 @@ import (
 )
 
 const numTestDataRows = 3
+
+var firstEntry = Entry{
+	ReportingName: "test_project",
+	ReportingRoot: "/path/to/project",
+	Directory:     "/path/to/project/input",
+	Instruction:   Backup,
+	Requestor:     "user",
+	Faculty:       "group",
+}
+
+func copyFile(src, dst string) error {
+	sourceFile, err := os.Open(src)
+	if err != nil {
+		return err
+	}
+	defer sourceFile.Close()
+
+	destinationFile, err := os.Create(dst)
+	if err != nil {
+		return err
+	}
+	defer destinationFile.Close()
+
+	_, err = io.Copy(destinationFile, sourceFile)
+	if err != nil {
+		return err
+	}
+
+	return destinationFile.Sync()
+}
 
 func TestReadAll(t *testing.T) {
 	originalEntries, testPath := createTestData(t)
@@ -101,15 +133,7 @@ func TestDeleteEntry(t *testing.T) {
 func createTestData(t *testing.T) ([]Entry, string) {
 	t.Helper()
 
-	baseEntry := Entry{
-		ReportingName: "test_project",
-		ReportingRoot: "/path/to/project",
-		Directory:     "/path/to/project/input",
-		Instruction:   Backup,
-		Requestor:     "user",
-		Faculty:       "group",
-	}
-
+	baseEntry := firstEntry
 	var entries []Entry
 	for i := range numTestDataRows {
 		newEntry := baseEntry
@@ -132,4 +156,61 @@ func createTestData(t *testing.T) ([]Entry, string) {
 	}
 
 	return entries, file.Name()
+}
+
+func TestWriteAll(t *testing.T) {
+	entries := []*Entry{&firstEntry}
+
+	filePath := filepath.Join(t.TempDir(), "test.csv")
+	defer os.Remove(filePath)
+
+	csvSource := CSVSource{path: filePath}
+
+	err := csvSource.writeAll(entries)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	newEntries, err := csvSource.readAll()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if len(newEntries) != 1 {
+		t.Fatal("Number of read entries is incorrect")
+	}
+
+	if !reflect.DeepEqual(*newEntries[0], firstEntry) {
+		t.Errorf("First entry does not match expected values.\nGot %+v, expected %+v", newEntries[0], firstEntry)
+	}
+}
+
+func TestAddEntry(t *testing.T) {
+	filePath := filepath.Join(t.TempDir(), "test.csv")
+	defer os.Remove(filePath)
+
+	err := copyFile("data/plan.csv", filePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	csvSource := CSVSource{path: filePath}
+
+	err = csvSource.addEntry(&firstEntry)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	entries, err := csvSource.readAll()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if len(entries) != 3 {
+		t.Fatal("Number of read entries is incorrect")
+	}
+
+	if !reflect.DeepEqual(*entries[2], firstEntry) {
+		t.Errorf("First entry does not match expected values.\nGot %+v, expected %+v", entries[0], firstEntry)
+	}
 }
