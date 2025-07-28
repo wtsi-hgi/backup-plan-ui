@@ -10,6 +10,7 @@ import (
 type DataSource interface {
 	readAll() ([]*Entry, error)
 	getEntry(id uint16) (*Entry, error)
+	updateEntry(newEntry *Entry) error
 }
 
 type CSVSource struct {
@@ -28,15 +29,9 @@ func (c CSVSource) readAll() ([]*Entry, error) {
 
 	entries := []*Entry{}
 
-	if err := gocsv.UnmarshalFile(in, &entries); err != nil {
-		return nil, err
-	}
+	err = gocsv.UnmarshalFile(in, &entries)
 
-	for i, entry := range entries {
-		entry.ID = uint16(i)
-	}
-
-	return entries, nil
+	return entries, err
 }
 
 func (c CSVSource) getEntry(id uint16) (*Entry, error) {
@@ -52,4 +47,34 @@ func (c CSVSource) getEntry(id uint16) (*Entry, error) {
 	}
 
 	return nil, ErrNoEntry
+}
+
+func (c CSVSource) updateEntry(newEntry *Entry) error {
+	entries, err := c.readAll()
+	if err != nil {
+		return err
+	}
+
+	found := false
+	for i, entry := range entries {
+		if entry.ID == newEntry.ID {
+			entries[i] = newEntry
+			found = true
+
+			break
+		}
+	}
+
+	if !found {
+		return ErrNoEntry
+	}
+
+	out, err := os.Create(c.path)
+	if err != nil {
+		return err
+	}
+
+	defer out.Close()
+
+	return gocsv.MarshalFile(&entries, out)
 }
