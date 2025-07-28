@@ -14,5 +14,11 @@
             hx-swap="outerHTML">
         Edit
       </button>
+      <button class="btn danger" 
+            hx-get="/actions/delete/{{.ID}}" 
+            hx-target="closest tr" 
+            hx-swap="outerHTML">
+        Delete
+      </button>
     </td>
   </tr>

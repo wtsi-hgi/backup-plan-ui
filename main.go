@@ -40,7 +40,6 @@ func main() {
 	dbPath := os.Args[1]
 
 	var db DataSource
-
 	db = CSVSource{dbPath}
 	server := server{db: db}
 
@@ -53,7 +52,8 @@ func main() {
 	r.Get("/entries", server.getEntries)
 	r.Get("/actions/edit/{id}", server.allowUserToEditRow)
 	r.Put("/actions/submit/{id}", server.submitEdits)
-	r.Get("/actions/cancel/{id}", server.cancelEdit)
+	r.Get("/actions/cancel/{id}", server.resetView)
+	r.Get("/actions/delete/{id}", server.deleteRow)
 
 	r.Handle("/static/*", http.StripPrefix("/static/", http.FileServer(http.Dir("./static"))))
 

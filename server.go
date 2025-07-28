@@ -22,6 +22,10 @@ var (
 	}).ParseFiles("templates/edit_row.html"))
 )
 
+func joinCommaSpace(items []string) string {
+	return strings.Join(items, ", ")
+}
+
 func (s server) getEntries(w http.ResponseWriter, r *http.Request) {
 	entries, err := s.db.readAll()
 	if err != nil {
@@ -57,14 +61,13 @@ func (s server) changeTemplate(w http.ResponseWriter, r *http.Request, tmpl *tem
 	return tmpl.Execute(w, entry)
 }
 
-func (s server) cancelEdit(w http.ResponseWriter, r *http.Request) {
+func (s server) resetView(w http.ResponseWriter, r *http.Request) {
 	err := s.changeTemplate(w, r, tmplRow)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 	}
 }
 
-// doesnt update it yet
 func (s server) submitEdits(w http.ResponseWriter, r *http.Request) {
 	idStr := chi.URLParam(r, "id")
 	id, err := strconv.Atoi(idStr)
@@ -85,7 +88,7 @@ func (s server) submitEdits(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	s.cancelEdit(w, r)
+	s.resetView(w, r)
 }
 
 func createEntryFromForm(id uint16, r *http.Request) *Entry {
@@ -103,7 +106,6 @@ func createEntryFromForm(id uint16, r *http.Request) *Entry {
 }
 
 func splitList(value string) []string {
-	// Support both comma-separated and newline-separated entries
 	parts := strings.FieldsFunc(value, func(r rune) bool {
 		return r == ',' || r == '\n'
 	})
@@ -119,6 +121,17 @@ func splitList(value string) []string {
 	return cleaned
 }
 
-func joinCommaSpace(items []string) string {
-	return strings.Join(items, ", ")
+func (s server) deleteRow(w http.ResponseWriter, r *http.Request) {
+	idStr := chi.URLParam(r, "id")
+	id, err := strconv.Atoi(idStr)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+
+		return
+	}
+
+	err = s.db.deleteEntry(uint16(id))
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+	}
 }

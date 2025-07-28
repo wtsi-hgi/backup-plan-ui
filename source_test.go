@@ -57,10 +57,34 @@ func TestUpdateEntry(t *testing.T) {
 	}
 
 	if len(entries) != 2 {
-		t.Error("CSV has more entries than expected.")
+		t.Error("CSV has the wrong number of entries.")
 	}
 
 	if !reflect.DeepEqual(*entries[0], newEntry) {
 		t.Errorf("First entry does not match the updated entry.\nGot %+v, expected %+v", entries[0], newEntry)
+	}
+}
+
+func TestDeleteEntry(t *testing.T) {
+	csvSource := CSVSource{path: "data/plan.csv"}
+
+	var idToRemove uint16 = 0
+
+	err := csvSource.deleteEntry(idToRemove) 
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	entries, err := csvSource.readAll()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if len(entries) > 1 {
+		t.Error("CSV has more entries than expected.")
+	}
+
+	if entries[0].ID == idToRemove {
+		t.Errorf("Entry was not removed")
 	}
 }
