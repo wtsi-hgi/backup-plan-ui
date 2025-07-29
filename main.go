@@ -27,7 +27,7 @@ type Entry struct {
 	Ignore        []string    `csv:"ignore"`
 	Requestor     string      `csv:"requestor"`
 	Faculty       string      `csv:"faculty"`
-	ID            uint16
+	ID            uint16      `csv:"id"`
 }
 
 var tmpl = template.Must(template.ParseFiles("templates/index.html"))

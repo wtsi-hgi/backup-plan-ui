@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"io"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -22,27 +21,6 @@ var firstEntry = Entry{
 	Faculty:       "group",
 }
 
-func copyFile(src, dst string) error {
-	sourceFile, err := os.Open(src)
-	if err != nil {
-		return err
-	}
-	defer sourceFile.Close()
-
-	destinationFile, err := os.Create(dst)
-	if err != nil {
-		return err
-	}
-	defer destinationFile.Close()
-
-	_, err = io.Copy(destinationFile, sourceFile)
-	if err != nil {
-		return err
-	}
-
-	return destinationFile.Sync()
-}
-
 func TestReadAll(t *testing.T) {
 	originalEntries, testPath := createTestData(t)
 
@@ -59,7 +37,7 @@ func TestReadAll(t *testing.T) {
 	}
 
 	for i := range entries {
-		if !reflect.DeepEqual(*entries[i], originalEntries[i]) {
+		if !reflect.DeepEqual(entries[i], originalEntries[i]) {
 			t.Errorf("Entry %d mismatch.\nGot %+v, expected %+v",
 				i, entries[i], originalEntries[i])
 		}
@@ -74,7 +52,7 @@ func TestUpdateEntry(t *testing.T) {
 	newEntry := originalEntries[0]
 	newEntry.ReportingName = "test_project_updated"
 
-	err := csvSource.updateEntry(&newEntry)
+	err := csvSource.updateEntry(newEntry)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -89,7 +67,7 @@ func TestUpdateEntry(t *testing.T) {
 			entries[0], originalEntries[0])
 	}
 
-	if !reflect.DeepEqual(*entries[0], newEntry) {
+	if !reflect.DeepEqual(entries[0], newEntry) {
 		t.Errorf("First entry does not match the updated entry.\nGot %+v, expected %+v",
 			entries[0], newEntry)
 	}
@@ -130,17 +108,18 @@ func TestDeleteEntry(t *testing.T) {
 	}
 }
 
-func createTestData(t *testing.T) ([]Entry, string) {
+func createTestData(t *testing.T) ([]*Entry, string) {
 	t.Helper()
 
 	baseEntry := firstEntry
-	var entries []Entry
+	entries := make([]*Entry, numTestDataRows)
+
 	for i := range numTestDataRows {
 		newEntry := baseEntry
 		newEntry.ReportingName = fmt.Sprintf("test_project_%d", i)
 		newEntry.ID = uint16(i)
 
-		entries = append(entries, newEntry)
+		entries[i] = &newEntry
 	}
 
 	file, err := os.CreateTemp(t.TempDir(), "*.csv")
@@ -158,15 +137,13 @@ func createTestData(t *testing.T) ([]Entry, string) {
 	return entries, file.Name()
 }
 
-func TestWriteAll(t *testing.T) {
-	entries := []*Entry{&firstEntry}
+func TestWriteEntries(t *testing.T) {
+	entries, _ := createTestData(t)
 
 	filePath := filepath.Join(t.TempDir(), "test.csv")
-	defer os.Remove(filePath)
-
 	csvSource := CSVSource{path: filePath}
 
-	err := csvSource.writeAll(entries)
+	err := csvSource.writeEntries(entries)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -176,27 +153,20 @@ func TestWriteAll(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if len(newEntries) != 1 {
+	if len(newEntries) != numTestDataRows {
 		t.Fatal("Number of read entries is incorrect")
 	}
 
-	if !reflect.DeepEqual(*newEntries[0], firstEntry) {
+	if !reflect.DeepEqual(newEntries, entries) {
 		t.Errorf("First entry does not match expected values.\nGot %+v, expected %+v", newEntries[0], firstEntry)
 	}
 }
 
 func TestAddEntry(t *testing.T) {
-	filePath := filepath.Join(t.TempDir(), "test.csv")
-	defer os.Remove(filePath)
-
-	err := copyFile("data/plan.csv", filePath)
-	if err != nil {
-		t.Fatal(err)
-	}
-
+	_, filePath := createTestData(t)
 	csvSource := CSVSource{path: filePath}
 
-	err = csvSource.addEntry(&firstEntry)
+	err := csvSource.addEntry(&firstEntry)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -206,11 +176,41 @@ func TestAddEntry(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if len(entries) != 3 {
+	if len(entries) != numTestDataRows+1 {
 		t.Fatal("Number of read entries is incorrect")
 	}
 
-	if !reflect.DeepEqual(*entries[2], firstEntry) {
+	if !reflect.DeepEqual(*entries[numTestDataRows], firstEntry) {
 		t.Errorf("First entry does not match expected values.\nGot %+v, expected %+v", entries[0], firstEntry)
+	}
+}
+
+func TestGetNextID(t *testing.T) {
+	tests := []struct {
+		entries    []*Entry
+		expectedID uint16
+	}{
+		{
+			entries:    []*Entry{&Entry{ID: 0}, &Entry{ID: 1}, &Entry{ID: 2}},
+			expectedID: 3,
+		},
+		{
+			entries:    []*Entry{&Entry{ID: 0}, &Entry{ID: 2}, &Entry{ID: 3}},
+			expectedID: 1,
+		},
+		{
+			entries:    []*Entry{&Entry{ID: 1}, &Entry{ID: 5}, &Entry{ID: 6}},
+			expectedID: 0,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(fmt.Sprintf("Expect %d", test.expectedID), func(t *testing.T) {
+			csvSource := CSVSource{}
+			id := csvSource.getNextID(test.entries)
+			if id != test.expectedID {
+				t.Errorf("Expected ID %d, got %d", test.expectedID, id)
+			}
+		})
 	}
 }

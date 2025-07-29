@@ -16,7 +16,7 @@ type server struct {
 var (
 	tmplRow     = parseTemplate("row.html")
 	tmplEditRow = parseTemplate("edit_row.html")
-	tmplAddRow  = parseTemplate("templates/add_row.html")
+	tmplAddRow  = parseTemplate("add_row.html")
 )
 
 const templateDir = "templates/"
@@ -90,7 +90,12 @@ func (s server) submitEdits(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	r.ParseForm()
+	err = r.ParseForm()
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+
+		return
+	}
 
 	updatedEntry := createEntryFromForm(uint16(id), r)
 
@@ -159,37 +164,18 @@ func (s server) showAddRowForm(w http.ResponseWriter, r *http.Request) {
 func (s server) addNewEntry(w http.ResponseWriter, r *http.Request) {
 	err := r.ParseForm()
 	if err != nil {
-		http.Error(w, "Failed to parse form", http.StatusBadRequest)
+		http.Error(w, err.Error(), http.StatusBadRequest)
+
 		return
 	}
 
-	newEntry := &Entry{
-		ReportingName: r.FormValue("ReportingName"),
-		ReportingRoot: r.FormValue("ReportingRoot"),
-		Directory:     r.FormValue("Directory"),
-		Instruction:   instruction(r.FormValue("Instruction")),
-		Requestor:     r.FormValue("Requestor"),
-		Faculty:       r.FormValue("Faculty"),
-	}
-
-	// Handle arrays (simplified for now)
-	match := r.FormValue("Match")
-	if match != "" {
-		newEntry.Match = []string{match}
-	} else {
-		newEntry.Match = []string{}
-	}
-
-	ignore := r.FormValue("Ignore")
-	if ignore != "" {
-		newEntry.Ignore = []string{ignore}
-	} else {
-		newEntry.Ignore = []string{}
-	}
+	var dummyEntryID uint16 // will be set later
+	newEntry := createEntryFromForm(dummyEntryID, r)
 
 	err = s.db.addEntry(newEntry)
 	if err != nil {
 		http.Error(w, "Failed to add entry: "+err.Error(), http.StatusInternalServerError)
+
 		return
 	}
 

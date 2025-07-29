@@ -19,7 +19,7 @@ type CSVSource struct {
 	path string
 }
 
-var ErrNoEntry = errors.New("Entry does not exist")
+var ErrNoEntry = errors.New("entry does not exist")
 
 func (c CSVSource) readAll() ([]*Entry, error) {
 	in, err := os.Open(c.path)
@@ -106,19 +106,26 @@ func (c CSVSource) addEntry(newEntry *Entry) error {
 		return err
 	}
 
-	newEntry.ID = uint16(len(entries))
+	newEntry.ID = c.getNextID(entries)
 
 	entries = append(entries, newEntry)
 
-	return c.writeAll(entries)
+	return c.writeEntries(entries)
 }
 
-func (c CSVSource) writeAll(entries []*Entry) error {
-	file, err := os.Create(c.path)
-	if err != nil {
-		return err
+func (c CSVSource) getNextID(entries []*Entry) uint16 {
+	used := make(map[uint16]struct{}, len(entries))
+	for _, entry := range entries {
+		used[entry.ID] = struct{}{}
 	}
-	defer file.Close()
 
-	return gocsv.MarshalFile(entries, file)
+	// Find gaps
+	for i := range uint16(len(used)) {
+		_, found := used[i]
+		if !found {
+			return i
+		}
+	}
+
+	return uint16(len(used))
 }
