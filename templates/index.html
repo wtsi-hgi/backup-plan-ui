@@ -9,28 +9,6 @@
 <body>
     <h1>HumGen and GenGen backup plan</h1>
 
-    <button hx-get="/hello" hx-target="#response" hx-swap="innerHTML">
-        Say Hello
-    </button>
-
-    <div id="response" style="margin-top: 1em;"></div>
-
-    <div>
-        <label >Make</label>
-        <select name="make" hx-get="/models" hx-target="#models" hx-indicator=".htmx-indicator">
-          <option value="audi">Audi</option>
-          <option value="toyota">Toyota</option>
-          <option value="bmw">BMW</option>
-        </select>
-      </div>
-      <div>
-        <label>Model</label>
-        <select id="models" name="model">
-          <option value="a1">A1</option>
-          ...
-        </select>
-    </div>
-
     <div class="table-container">
         <div class="table-actions">
             <button class="btn"

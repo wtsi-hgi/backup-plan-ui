@@ -48,8 +48,6 @@ func main() {
 	r := chi.NewRouter()
 
 	r.Get("/", serveHome)
-	r.Get("/hello", sayHello)
-	r.Get("/models", models)
 
 	r.Get("/entries", server.getEntries)
 	r.Get("/actions/edit/{id}", server.allowUserToEditRow)
@@ -70,16 +68,4 @@ func serveHome(w http.ResponseWriter, r *http.Request) {
 	if err := tmpl.Execute(w, nil); err != nil {
 		http.Error(w, "Template rendering failed", http.StatusInternalServerError)
 	}
-}
-
-func sayHello(w http.ResponseWriter, r *http.Request) {
-	w.Write([]byte("<p>Hello from Go! 👋</p>"))
-}
-
-func models(w http.ResponseWriter, r *http.Request) {
-	make := r.URL.Query().Get("make")
-
-	fmt.Println("Selected make:", make)
-
-	w.Write([]byte("<option value='325i'>325i</option>\n<option value='325ix'>325ix</option>\n<option value='X5'>X5</option> "))
 }
