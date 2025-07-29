@@ -1,0 +1,58 @@
+<table class="table">
+  <thead>
+    <tr>
+      <th>Reporting name</th>
+      <th>Reporting root</th>
+      <th>Directory</th>
+      <th>Instruction</th>
+      <th>Match</th>
+      <th>Ignore</th>
+      <th>Requestor</th>
+      <th>Faculty</th>
+      <th>Actions</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr hx-trigger='cancel' 
+        class='editing' 
+        hx-get="/actions/cancel/new"
+        hx-target="#add-row-container" 
+        hx-swap="innerHTML">
+        <td>
+            <input autofocus name='ReportingName' value="">
+        </td>
+        <td>
+            <input name='ReportingRoot' value="">
+        </td>
+        <td>
+            <input name='Directory' value="">
+        </td>
+        <td>
+            <input name='Instruction' value="">
+        </td>
+        <td>
+            <input name='Match' value="">
+        </td>
+        <td>
+            <input name='Ignore' value="">
+        </td>
+        <td>
+            <input name='Requestor' value="">
+        </td>
+        <td>
+            <input name='Faculty' value="">
+        </td>
+        <td>
+            <button class="btn danger" 
+                hx-get="/actions/cancel/new">
+                Cancel
+            </button>
+            <button class="btn primary" 
+                hx-put="/actions/add"
+                hx-include="closest tr">
+                Save
+            </button>
+        </td>
+    </tr>
+  </tbody>
+</table>

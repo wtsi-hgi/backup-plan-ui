@@ -16,6 +16,7 @@ type server struct {
 var (
 	tmplRow     = parseTemplate("row.html")
 	tmplEditRow = parseTemplate("edit_row.html")
+	tmplAddRow  = parseTemplate("add_row.html")
 )
 
 const templateDir = "templates/"
@@ -69,6 +70,11 @@ func (s server) changeTemplate(w http.ResponseWriter, r *http.Request, tmpl *tem
 }
 
 func (s server) resetView(w http.ResponseWriter, r *http.Request) {
+	idStr := chi.URLParam(r, "id")
+
+	if idStr == "new" {
+		return
+	}
 	err := s.changeTemplate(w, r, tmplRow)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -84,7 +90,12 @@ func (s server) submitEdits(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	r.ParseForm()
+	err = r.ParseForm()
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+
+		return
+	}
 
 	updatedEntry := createEntryFromForm(uint16(id), r)
 
@@ -141,4 +152,33 @@ func (s server) deleteRow(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 	}
+}
+
+func (s server) showAddRowForm(w http.ResponseWriter, r *http.Request) {
+	err := tmplAddRow.Execute(w, nil)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
+}
+
+func (s server) addNewEntry(w http.ResponseWriter, r *http.Request) {
+	err := r.ParseForm()
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+
+		return
+	}
+
+	var dummyEntryID uint16 // will be set later
+	newEntry := createEntryFromForm(dummyEntryID, r)
+
+	err = s.db.addEntry(newEntry)
+	if err != nil {
+		http.Error(w, "Failed to add entry: "+err.Error(), http.StatusInternalServerError)
+
+		return
+	}
+
+	// Set HX-Trigger to refresh the entry table
+	w.Header().Set("HX-Trigger", "entriesChanged")
 }
