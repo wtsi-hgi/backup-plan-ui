@@ -77,3 +77,18 @@ tr.editing {
     border: 1px solid #ddd;
     border-radius: 4px;
 }
+
+.editing select {
+    width: 100%;
+    padding: 8px 38px 8px 10px; /* extra right padding for bigger arrow */
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    background-color: white;
+    color: #333;
+    cursor: pointer;
+    background-image: url("data:image/svg+xml;utf8,<svg fill='gray' height='18' viewBox='0 0 24 24' width='18' xmlns='http://www.w3.org/2000/svg'><path d='M7 10l5 5 5-5z'/></svg>");
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+    background-size: 18px;
+    appearance: none;
+}

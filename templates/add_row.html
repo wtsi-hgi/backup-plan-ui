@@ -28,7 +28,11 @@
             <input name='Directory' value="">
         </td>
         <td>
-            <input name='Instruction' value="">
+            <select name="Instruction">
+                <option value="backup" {{if eq .Instruction "backup"}}selected{{end}}>backup</option>
+                <option value="nobackup" {{if eq .Instruction "nobackup"}}selected{{end}}>nobackup</option>
+                <option value="tempbackup" {{if eq .Instruction "tempbackup"}}selected{{end}}>tempbackup</option>
+            </select>
         </td>
         <td>
             <input name='Match' value="">
