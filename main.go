@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"html/template"
+	"log"
 	"net/http"
 	"os"
 
@@ -33,15 +34,14 @@ var tmpl = template.Must(template.ParseFiles("templates/index.html"))
 
 func main() {
 	if len(os.Args) != 2 {
-		fmt.Println("You should provide a path to a database")
+		fmt.Println("Usage: go run . <path-to-csv>")
 		os.Exit(1)
 	}
 
 	dbPath := os.Args[1]
+	fmt.Println("Using database:", dbPath)
 
-	var db DataSource
-
-	db = CSVSource{dbPath}
+	var db DataSource = CSVSource{dbPath}
 	server := server{db: db}
 
 	r := chi.NewRouter()
@@ -53,15 +53,20 @@ func main() {
 	r.Get("/entries", server.getEntries)
 	r.Get("/actions/edit/{id}", server.allowUserToEditRow)
 	r.Put("/actions/submit/{id}", server.submitEdits)
-	r.Get("/actions/cancel/{id}", server.cancelEdit)
+	r.Get("/actions/cancel/{id}", server.resetView)
+	r.Get("/actions/delete/{id}", server.deleteRow)
 
 	r.Handle("/static/*", http.StripPrefix("/static/", http.FileServer(http.Dir("./static"))))
 
-	http.ListenAndServe(":4000", r)
+	if err := http.ListenAndServe(":4000", r); err != nil {
+		log.Fatalf("Server failed to start: %v", err)
+	}
 }
 
 func serveHome(w http.ResponseWriter, r *http.Request) {
-	tmpl.Execute(w, nil)
+	if err := tmpl.Execute(w, nil); err != nil {
+		http.Error(w, "Template rendering failed", http.StatusInternalServerError)
+	}
 }
 
 func sayHello(w http.ResponseWriter, r *http.Request) {

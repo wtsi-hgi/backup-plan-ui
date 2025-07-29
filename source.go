@@ -10,6 +10,8 @@ import (
 type DataSource interface {
 	readAll() ([]*Entry, error)
 	getEntry(id uint16) (*Entry, error)
+	updateEntry(newEntry *Entry) error
+	deleteEntry(id uint16) error
 }
 
 type CSVSource struct {
@@ -28,15 +30,9 @@ func (c CSVSource) readAll() ([]*Entry, error) {
 
 	entries := []*Entry{}
 
-	if err := gocsv.UnmarshalFile(in, &entries); err != nil {
-		return nil, err
-	}
+	err = gocsv.UnmarshalFile(in, &entries)
 
-	for i, entry := range entries {
-		entry.ID = uint16(i)
-	}
-
-	return entries, nil
+	return entries, err
 }
 
 func (c CSVSource) getEntry(id uint16) (*Entry, error) {
@@ -45,11 +41,60 @@ func (c CSVSource) getEntry(id uint16) (*Entry, error) {
 		return nil, err
 	}
 
-	for _, entry := range entries {
+	entry, _, err := getMatchingEntryWithID(id, entries)
+
+	return entry, err
+}
+
+func getMatchingEntryWithID(id uint16, entries []*Entry) (*Entry, int, error) {
+	for i, entry := range entries {
 		if entry.ID == uint16(id) {
-			return entry, nil
+			return entry, i, nil
 		}
 	}
 
-	return nil, ErrNoEntry
+	return nil, 0, ErrNoEntry
+}
+
+func (c CSVSource) updateEntry(newEntry *Entry) error {
+	entries, err := c.readAll()
+	if err != nil {
+		return err
+	}
+
+	_, index, err := getMatchingEntryWithID(newEntry.ID, entries)
+	if err != nil {
+		return err
+	}
+
+	entries[index] = newEntry
+
+	return c.writeEntries(entries)
+}
+
+func (c CSVSource) writeEntries(entries []*Entry) error {
+	out, err := os.Create(c.path)
+	if err != nil {
+		return err
+	}
+
+	defer out.Close()
+
+	return gocsv.MarshalFile(&entries, out)
+}
+
+func (c CSVSource) deleteEntry(id uint16) error {
+	entries, err := c.readAll()
+	if err != nil {
+		return err
+	}
+
+	_, index, err := getMatchingEntryWithID(id, entries)
+	if err != nil {
+		return err
+	}
+
+	entries = append(entries[:index], entries[index+1:]...)
+
+	return c.writeEntries(entries)
 }

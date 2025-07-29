@@ -3,8 +3,8 @@
     <td>{{.ReportingRoot}}</td>
     <td>{{.Directory}}</td>
     <td>{{.Instruction}}</td>
-    <td>{{.Match}}</td>
-    <td>{{.Ignore}}</td>
+    <td>{{join .Match}}</td>
+    <td>{{join .Ignore}}</td>
     <td>{{.Requestor}}</td>
     <td>{{.Faculty}}</td>
     <td>
@@ -13,6 +13,12 @@
             hx-target="closest tr" 
             hx-swap="outerHTML">
         Edit
+      </button>
+      <button class="btn danger" 
+            hx-get="/actions/delete/{{.ID}}" 
+            hx-target="closest tr" 
+            hx-swap="outerHTML">
+        Delete
       </button>
     </td>
   </tr>
