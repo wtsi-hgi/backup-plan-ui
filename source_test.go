@@ -12,15 +12,6 @@ import (
 
 const numTestDataRows = 3
 
-var firstEntry = Entry{
-	ReportingName: "test_project",
-	ReportingRoot: "/path/to/project",
-	Directory:     "/path/to/project/input",
-	Instruction:   Backup,
-	Requestor:     "user",
-	Faculty:       "group",
-}
-
 func TestReadAll(t *testing.T) {
 	originalEntries, testPath := createTestData(t)
 
@@ -111,7 +102,15 @@ func TestDeleteEntry(t *testing.T) {
 func createTestData(t *testing.T) ([]*Entry, string) {
 	t.Helper()
 
-	baseEntry := firstEntry
+	baseEntry := Entry{
+		ReportingName: "test_project",
+		ReportingRoot: "/path/to/project",
+		Directory:     "/path/to/project/input",
+		Instruction:   Backup,
+		Requestor:     "user",
+		Faculty:       "group",
+	}
+
 	entries := make([]*Entry, numTestDataRows)
 
 	for i := range numTestDataRows {
@@ -158,20 +157,23 @@ func TestWriteEntries(t *testing.T) {
 	}
 
 	if !reflect.DeepEqual(newEntries, entries) {
-		t.Errorf("First entry does not match expected values.\nGot %+v, expected %+v", newEntries[0], firstEntry)
+		t.Errorf("Written entry does not match expected entries.\nGot %+v, expected %+v", newEntries, entries)
 	}
 }
 
 func TestAddEntry(t *testing.T) {
-	_, filePath := createTestData(t)
+	entries, filePath := createTestData(t)
 	csvSource := CSVSource{path: filePath}
 
-	err := csvSource.addEntry(&firstEntry)
+	newEntry := entries[0]
+	newEntry.ReportingName = "test_project_new"
+
+	err := csvSource.addEntry(newEntry)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	entries, err := csvSource.readAll()
+	entries, err = csvSource.readAll()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -180,8 +182,8 @@ func TestAddEntry(t *testing.T) {
 		t.Fatal("Number of read entries is incorrect")
 	}
 
-	if !reflect.DeepEqual(*entries[numTestDataRows], firstEntry) {
-		t.Errorf("First entry does not match expected values.\nGot %+v, expected %+v", entries[0], firstEntry)
+	if !reflect.DeepEqual(entries[numTestDataRows], newEntry) {
+		t.Errorf("New entry does not match expected values.\nGot %+v, expected %+v", entries[numTestDataRows], newEntry)
 	}
 }
 
