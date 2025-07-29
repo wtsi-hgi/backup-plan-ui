@@ -1,4 +1,4 @@
-<tr>
+<tr data-id="{{.ID}}">
     <td>{{.ReportingName}}</td>
     <td>{{.ReportingRoot}}</td>
     <td>{{.Directory}}</td>
@@ -15,9 +15,9 @@
         Edit
       </button>
       <button class="btn danger" 
-            hx-get="/actions/delete/{{.ID}}" 
-            hx-target="closest tr" 
-            hx-swap="outerHTML">
+        hx-get="/actions/startDelete/{{.ID}}" 
+        hx-target="body" 
+        hx-swap="beforeend">
         Delete
       </button>
     </td>

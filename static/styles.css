@@ -78,6 +78,160 @@ tr.editing {
     border-radius: 4px;
 }
 
+#modal {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background-color: rgba(0,0,0,0.5);
+  z-index: 1000;
+}
+
+.modal-underlay {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+}
+
+.modal-content {
+  background: #fff;
+  border-radius: 8px;
+  width: 400px;
+  max-width: 90%;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+  animation: fadeIn 200ms ease;
+  overflow: hidden;
+  z-index: 1;
+}
+
+.modal-header {
+  background-color: #e53935;
+  color: white;
+  padding: 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 1.2rem;
+}
+
+.modal-icon {
+  font-size: 1.5rem;
+}
+
+.modal-body {
+  padding: 20px;
+  text-align: center;
+}
+
+.modal-body .warning {
+  color: #e53935;
+  font-weight: bold;
+  margin-top: 8px;
+}
+
+.modal-footer {
+  display: flex;
+  justify-content: space-between;
+  padding: 16px;
+  background-color: #f5f5f5;
+}
+
+.btn {
+  padding: 10px 16px;
+  border: none;
+  border-radius: 4px;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.btn.cancel {
+  background-color: #e0e0e0;
+  color: #333;
+}
+
+.btn.delete {
+  background-color: #e53935;
+  color: white;
+}
+
+#modal {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background-color: rgba(0,0,0,0.5);
+  z-index: 1000;
+}
+
+.modal-underlay {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+}
+
+.modal-content {
+  background: #fff;
+  border-radius: 8px;
+  width: 400px;
+  max-width: 90%;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+  animation: fadeIn 200ms ease;
+  overflow: hidden;
+  z-index: 1;
+}
+
+.modal-header {
+  background-color: #e53935;
+  color: white;
+  padding: 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 1.2rem;
+}
+
+.modal-icon {
+  font-size: 1.5rem;
+}
+
+.modal-body {
+  padding: 20px;
+  text-align: center;
+}
+
+.modal-body .warning {
+  color: #e53935;
+  font-weight: bold;
+  margin-top: 8px;
+}
+
+.modal-footer {
+  display: flex;
+  justify-content: space-between;
+  padding: 16px;
+  background-color: #f5f5f5;
+}
+
+.btn {
+  padding: 10px 16px;
+  border: none;
+  border-radius: 4px;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.btn.cancel {
+  background-color: #e0e0e0;
+  color: #333;
+}
+
+.btn.delete {
+  background-color: #e53935;
+  color: white;
+}
+
 .editing select {
     width: 100%;
     padding: 8px 38px 8px 10px; /* extra right padding for bigger arrow */

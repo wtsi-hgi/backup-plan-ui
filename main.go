@@ -53,7 +53,10 @@ func main() {
 	r.Get("/actions/edit/{id}", server.allowUserToEditRow)
 	r.Put("/actions/submit/{id}", server.submitEdits)
 	r.Get("/actions/cancel/{id}", server.resetView)
+	r.Get("/actions/delete/{id}", returnEmpty)
 	r.Get("/actions/delete/{id}", server.deleteRow)
+	r.Get("/actions/startDelete/{id}", server.openDeleteDialog)
+	r.Get("/actions/cancelDel", returnEmpty)
 	r.Get("/actions/add", server.showAddRowForm)
 	r.Put("/actions/add", server.addNewEntry)
 
@@ -63,6 +66,8 @@ func main() {
 		log.Fatalf("Server failed to start: %v", err)
 	}
 }
+
+var returnEmpty = func(w http.ResponseWriter, r *http.Request) {}
 
 func serveHome(w http.ResponseWriter, r *http.Request) {
 	if err := tmpl.Execute(w, nil); err != nil {

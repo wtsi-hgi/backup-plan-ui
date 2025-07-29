@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"html/template"
 	"net/http"
 	"strconv"
@@ -14,9 +15,10 @@ type server struct {
 }
 
 var (
-	tmplRow     = parseTemplate("row.html")
-	tmplEditRow = parseTemplate("edit_row.html")
-	tmplAddRow  = parseTemplate("add_row.html")
+	tmplRow          = parseTemplate("row.html")
+	tmplEditRow      = parseTemplate("edit_row.html")
+	tmplAddRow       = parseTemplate("add_row.html")
+	tmplDeleteDialog = parseTemplate("delete_modal.html")
 )
 
 const templateDir = "templates/"
@@ -152,6 +154,14 @@ func (s server) deleteRow(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 	}
+
+	w.Header().Set("Content-Type", "text/html")
+	w.Write([]byte(fmt.Sprintf(`
+		<script>
+			document.getElementById('modal')?.remove();
+			document.querySelector('tr[data-id="%d"]')?.remove();
+		</script>
+	`, id)))
 }
 
 func (s server) showAddRowForm(w http.ResponseWriter, r *http.Request) {
@@ -181,4 +191,11 @@ func (s server) addNewEntry(w http.ResponseWriter, r *http.Request) {
 
 	// Set HX-Trigger to refresh the entry table
 	w.Header().Set("HX-Trigger", "entriesChanged")
+}
+
+func (s server) openDeleteDialog(w http.ResponseWriter, r *http.Request) {
+	err := s.changeTemplate(w, r, tmplDeleteDialog)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+	}
 }
