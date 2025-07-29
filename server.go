@@ -26,7 +26,6 @@ func parseTemplate(name string) *template.Template {
 		template.New(name).
 			Funcs(template.FuncMap{
 				"join": joinCommaSpace,
-				"eq": func(a instruction, b string) bool { return string(a) == b },
 			}).
 			ParseFiles(templateDir + name))
 }
