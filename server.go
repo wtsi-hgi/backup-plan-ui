@@ -73,7 +73,6 @@ func (s server) resetView(w http.ResponseWriter, r *http.Request) {
 	idStr := chi.URLParam(r, "id")
 
 	if idStr == "new" {
-		_, _ = w.Write([]byte(""))
 		return
 	}
 	err := s.changeTemplate(w, r, tmplRow)
@@ -196,6 +195,4 @@ func (s server) addNewEntry(w http.ResponseWriter, r *http.Request) {
 
 	// Set HX-Trigger to refresh the entry table
 	w.Header().Set("HX-Trigger", "entriesChanged")
-
-	_, _ = w.Write([]byte(""))
 }
