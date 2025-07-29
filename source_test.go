@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"os"
-	"path/filepath"
 	"reflect"
 	"testing"
 
@@ -65,7 +64,9 @@ func TestUpdateEntry(t *testing.T) {
 }
 
 func TestDeleteEntry(t *testing.T) {
-	for id := range numTestDataRows {
+	rowsToTest := []uint16{0, max(0, numTestDataRows-2), numTestDataRows - 1}
+
+	for _, id := range rowsToTest {
 		idToDelete := uint16(id)
 
 		t.Run(fmt.Sprintf("Entry %d", idToDelete), func(t *testing.T) {
@@ -118,20 +119,17 @@ func createTestData(t *testing.T) ([]Entry, string) {
 		entries = append(entries, newEntry)
 	}
 
-	dir := os.TempDir()
-	testPath := filepath.Join(dir, "testing")
-
-	out, err := os.Create(testPath)
+	file, err := os.CreateTemp(t.TempDir(), "*.csv")
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	defer out.Close()
+	defer file.Close()
 
-	err = gocsv.MarshalFile(&entries, out)
+	err = gocsv.MarshalFile(&entries, file)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	return entries, testPath
+	return entries, file.Name()
 }

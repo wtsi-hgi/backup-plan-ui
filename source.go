@@ -69,11 +69,11 @@ func (c CSVSource) updateEntry(newEntry *Entry) error {
 
 	entries[index] = newEntry
 
-	return writeEntriesToCSV(entries, c.path)
+	return c.writeEntries(entries)
 }
 
-func writeEntriesToCSV(entries []*Entry, path string) error {
-	out, err := os.Create(path)
+func (c CSVSource) writeEntries(entries []*Entry) error {
+	out, err := os.Create(c.path)
 	if err != nil {
 		return err
 	}
@@ -96,5 +96,5 @@ func (c CSVSource) deleteEntry(id uint16) error {
 
 	entries = append(entries[:index], entries[index+1:]...)
 
-	return writeEntriesToCSV(entries, c.path)
+	return c.writeEntries(entries)
 }
