@@ -29,7 +29,7 @@ func parseTemplate(name string) *template.Template {
 			Funcs(template.FuncMap{
 				"join": joinCommaSpace,
 			}).
-			ParseFiles(templateDir + name))
+			ParseFS(templateFiles, templateDir+name))
 }
 
 func joinCommaSpace(items []string) string {

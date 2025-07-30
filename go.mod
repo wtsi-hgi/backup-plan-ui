@@ -1,4 +1,4 @@
-module ibackup-plan-ui
+module backup-plan-ui
 
 go 1.24.4
 
