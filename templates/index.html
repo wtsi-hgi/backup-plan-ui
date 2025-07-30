@@ -5,13 +5,14 @@
     <title>Backup Plan UI</title>
     <link rel="stylesheet" href="/static/styles.css">
     <script src="https://unpkg.com/htmx.org@1.9.12"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 </head>
 <body>
     <h1>HumGen and GenGen backup plan</h1>
 
     <div class="table-container">
         <div class="table-actions">
-            <button class="btn"
+            <button class="btn primary"
                     hx-get="/actions/add"
                     hx-target="#add-row-container"
                     hx-swap="innerHTML">

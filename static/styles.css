@@ -1,3 +1,9 @@
+body {
+    font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji";
+
+    font-size: 14px;
+}
+
 /* Table styles */
 table {
     width: 100%;
@@ -26,7 +32,6 @@ button {
     padding: 10px 15px;
     border-radius: 4px;
     cursor: pointer;
-    font-size: 16px;
     transition: background-color 0.3s;
 }
 
@@ -91,4 +96,66 @@ tr.editing {
     background-position: right 10px center;
     background-size: 18px;
     appearance: none;
+}
+
+#modal {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background-color: rgba(0,0,0,0.5);
+  z-index: 1000;
+}
+
+.modal-underlay {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+}
+
+.modal-content {
+  background: #fff;
+  border-radius: 12px;
+  width: 400px;
+  max-width: 90%;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+  overflow: hidden;
+  z-index: 1;
+  text-align: center;
+}
+
+.modal-header {
+    background-color: #e74c3c;
+    padding: 15px;
+    color: white;
+    margin: 0;
+}
+
+.modal-body {
+    padding-top: 10px;
+    padding-bottom: 5px;
+    font-size: 15px;
+}
+
+.modal-footer {
+    display: flex;
+    gap: 50px;
+    justify-content: center;
+    padding: 10px;
+    padding-bottom: 15px;
+}
+
+.modal-footer .btn {
+    font-weight: bold;
+    width: 100px;
+}
+
+.modal-footer .btn.primary {
+    background-color: rgb(221, 221, 221);
+    color: #333;
+}
+
+.modal-footer .btn.primary:hover {
+    background-color: rgb(202, 202, 202);
 }

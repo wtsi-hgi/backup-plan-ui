@@ -1,0 +1,23 @@
+<div id="modal">
+    <div class="modal-underlay"></div>
+    <div class="modal-content">
+      <h1 class="modal-header">Confirm Deletion</h1>
+      <div class="modal-body">
+        <p>Are you sure you want to delete <strong>{{.ReportingName}}</strong>?</p>
+      </div>
+      <div class="modal-footer">
+        <button class="btn primary" 
+            hx-get="/actions/cancelDel"
+            hx-target="#modal"
+            hx-swap="outerHTML">
+            Cancel
+        </button>
+        <button class="btn danger"
+            hx-get="/actions/delete/{{.ID}}"
+            hx-target="#modal"
+            hx-swap="outerHTML">
+            Delete
+        </button>
+    </div>
+  </div>
+  

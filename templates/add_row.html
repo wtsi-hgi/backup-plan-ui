@@ -47,15 +47,15 @@
             <input name='Faculty' value="">
         </td>
         <td>
-            <button class="btn danger" 
-                hx-get="/actions/cancel/new">
-                Cancel
-            </button>
             <button class="btn primary" 
-                hx-put="/actions/add"
-                hx-include="closest tr">
-                Save
-            </button>
+            hx-put="/actions/add"
+            hx-include="closest tr">
+            Save
+        </button>
+        <button class="btn danger" 
+            hx-get="/actions/cancel/new">
+            Cancel
+        </button>
         </td>
     </tr>
   </tbody>
