@@ -32,14 +32,14 @@
         <input name='Faculty' value="{{.Faculty}}">
     </td>
     <td>
-        <button class="btn danger" 
-            hx-get="/actions/cancel/{{.ID}}">
-            Cancel
-        </button>
         <button class="btn primary"
             hx-put="/actions/submit/{{.ID}}"
             hx-include="closest tr">
             Save
+        </button>
+        <button class="btn danger" 
+            hx-get="/actions/cancel/{{.ID}}">
+            Cancel
         </button>
     </td>
   </tr>
