@@ -168,13 +168,15 @@ tr.editing {
   border-radius: 6px;
   background-color: white;
   padding: 5px;
-  min-height: 40px;
+  min-height: 10px;
+  width: 100%;  
+  max-width: 300px;
   cursor: text;
   gap: 4px;
 }
 
 .tag {
-  background-color: #d3d3d3;
+  background-color: #e7e7e7;
   border-radius: 30px; 
   display: flex;
   align-items: center;
@@ -184,14 +186,14 @@ tr.editing {
 }
 
 .tag button {
-    background-color: #ababab;
+    background-color: #cacaca;
     border: none;
     border-radius: 50%;      /* makes it a circle */
     margin-left: 10px;
     margin-right: 10px;
     cursor: pointer;
     font-size: 18px;
-    color: #d3d3d3;
+    color: #e7e7e7;
   
     height: 20px;
     width: 20px;

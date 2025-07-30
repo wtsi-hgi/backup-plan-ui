@@ -20,82 +20,41 @@
         </select>
     </td>
     <td>
-      <div
-        x-data="{
-          tags: '{{join .Match}}'.split(',').map(t => t.trim()).filter(Boolean),
-          newTag: '',
-          addTag() {
-            const tag = this.newTag.trim();
-            if (tag && !this.tags.includes(tag)) {
-              this.tags.push(tag);
-            }
-            this.newTag = '';
-          },
-          removeTag(i) {
-            this.tags.splice(i, 1);
-          }
-        }"
-      >
-        <!-- Chip list -->
-        <template x-for="(tag, i) in tags" :key="i">
-          <span class="tag">
-            <span x-text="tag"></span>
-            <button type="button" @click="removeTag(i)">&times;</button>
-          </span>
-        </template>
-    
-        <!-- Input box -->
-        <input
-          type="text"
-          x-model="newTag"
-          @keydown.enter.prevent="addTag"
-          @keydown.,.prevent="addTag"
-          placeholder="Add value and press Enter"
-        >
-    
-        <!-- Hidden input for backend -->
-        <input type="hidden" name="Match" :value="tags.join(', ')">
-      </div>
+        <div x-data="tagInputComponent('{{.Match}}'.split(' ').map(t => t.trim()).filter(Boolean), 'Match')">
+            <div class="tag-container">
+              <template x-for="(tag, i) in tags" :key="i">
+                <div class="tag">
+                  <span x-text="tag"></span>
+                  <button type="button" @click="removeTag(i)">&times;</button>
+                </div>
+              </template>
+              <input
+                type="text"
+                x-model="newTag"
+                @keydown.enter.prevent="addTag"
+                placeholder="..."
+              >
+            </div>
+            <input type="hidden" :name="name" :value="tags.join(' ')">
+        </div>
     </td>
     <td>   
-        <div
-          x-data="{
-            tags: '{{join .Ignore}}'.split(',').map(t => t.trim()).filter(Boolean),
-            newTag: '',
-            addTag() {
-              const tag = this.newTag.trim();
-              if (tag && !this.tags.includes(tag)) {
-                this.tags.push(tag);
-              }
-              this.newTag = '';
-            },
-            removeTag(i) {
-              this.tags.splice(i, 1);
-            }
-          }"
-        >
-
-        <div class="tag-container">
-            <!-- Chip list -->
-            <template x-for="(tag, i) in tags" :key="i">
-              <div class="tag">
-                <span x-text="tag"></span>
-                <button type="button" @click="removeTag(i)">&times;</button>
-              </div>
-            </template>
-        
-            <!-- Input box -->
-            <input
-              type="text"
-              x-model="newTag"
-              @keydown.enter.prevent="addTag"
-              @keydown.,.prevent="addTag"
-              placeholder="..."
-            >
-        </div>
-      
-          <!-- Hidden input for backend -->
-          <input type="hidden" name="Ignore" :value="tags.join(', ')">
+        <div x-data="tagInputComponent('{{.Ignore}}'.split(' ').map(t => t.trim()).filter(Boolean), 'Ignore')">
+            <div class="tag-container">
+              <template x-for="(tag, i) in tags" :key="i">
+                <div class="tag">
+                  <span x-text="tag"></span>
+                  <button type="button" @click="removeTag(i)">&times;</button>
+                </div>
+              </template>
+              <input
+                type="text"
+                x-model="newTag"
+                @keydown.enter.prevent="addTag"
+                placeholder="..."
+              >
+            </div>
+            <input type="hidden" :name="name" :value="tags.join(' ')">
         </div>
     </td>
     <td>

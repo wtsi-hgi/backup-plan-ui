@@ -44,6 +44,27 @@
             </tbody>
         </table>
     </div>
+
+    <script>
+        // Alpine.js component for reusable tag input
+        function tagInputComponent(initialTags = [], inputName = '') {
+          return {
+            tags: initialTags,
+            newTag: '',
+            name: inputName,
+            addTag() {
+              const tag = this.newTag.trim();
+              if (tag && !this.tags.includes(tag)) {
+                this.tags.push(tag);
+              }
+              this.newTag = '';
+            },
+            removeTag(i) {
+              this.tags.splice(i, 1);
+            }
+          }
+        }
+      </script>
 </body>
 </html>
 
