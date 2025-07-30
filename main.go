@@ -53,7 +53,6 @@ func main() {
 	r.Get("/actions/edit/{id}", server.allowUserToEditRow)
 	r.Put("/actions/submit/{id}", server.submitEdits)
 	r.Get("/actions/cancel/{id}", server.resetView)
-	r.Get("/actions/delete/{id}", returnEmpty)
 	r.Get("/actions/delete/{id}", server.deleteRow)
 	r.Get("/actions/startDelete/{id}", server.openDeleteDialog)
 	r.Get("/actions/cancelDel", returnEmpty)
