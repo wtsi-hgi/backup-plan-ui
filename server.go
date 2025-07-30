@@ -36,7 +36,7 @@ func joinCommaSpace(items []string) string {
 	return strings.Join(items, ", ")
 }
 
-func (s server) getEntries(w http.ResponseWriter, r *http.Request) {
+func (s server) getEntries(w http.ResponseWriter, _ *http.Request) {
 	entries, err := s.db.readAll()
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -45,7 +45,10 @@ func (s server) getEntries(w http.ResponseWriter, r *http.Request) {
 	}
 
 	for _, entry := range entries {
-		tmplRow.Execute(w, entry)
+		err = tmplRow.Execute(w, entry)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+		}
 	}
 }
 
@@ -156,15 +159,19 @@ func (s server) deleteRow(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "text/html")
-	w.Write([]byte(fmt.Sprintf(`
+	_, err = w.Write([]byte(fmt.Sprintf(`
 		<script>
 			document.getElementById('modal')?.remove();
 			document.querySelector('tr[data-id="%d"]')?.remove();
 		</script>
 	`, id)))
+
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
 }
 
-func (s server) showAddRowForm(w http.ResponseWriter, r *http.Request) {
+func (s server) showAddRowForm(w http.ResponseWriter, _ *http.Request) {
 	err := tmplAddRow.Execute(w, nil)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
