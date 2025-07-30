@@ -159,3 +159,56 @@ tr.editing {
 .modal-footer .btn.primary:hover {
     background-color: rgb(202, 202, 202);
 }
+
+.tag-container {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  background-color: white;
+  padding: 5px;
+  min-height: 40px;
+  cursor: text;
+  gap: 4px;
+}
+
+.tag {
+  background-color: #d3d3d3;
+  border-radius: 30px; 
+  display: flex;
+  align-items: center;
+  font-size: 14px;  
+  padding-left: 17px;
+  height: 30px;
+}
+
+.tag button {
+    background-color: #ababab;
+    border: none;
+    border-radius: 50%;      /* makes it a circle */
+    margin-left: 10px;
+    margin-right: 10px;
+    cursor: pointer;
+    font-size: 18px;
+    color: #d3d3d3;
+  
+    height: 20px;
+    width: 20px;
+  
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;          /* prevent extra vertical space */
+    padding: 0;              /* no internal padding */
+  }
+
+.tag-container input {
+  flex: 1;
+  min-width: 100px;
+  border: none;
+  outline: none;
+  background: transparent;
+  padding: 5px;
+  font-size: 14px;
+}
