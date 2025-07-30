@@ -38,7 +38,7 @@ type Entry struct {
 	ID            uint16      `csv:"id"`
 }
 
-var tmpl = template.Must(template.ParseFS(templateFiles, templateDir+"index.html"))
+var tmpl = template.Must(template.ParseFS(templateFiles, "templates/index.html"))
 
 func main() {
 	if len(os.Args) != 2 {

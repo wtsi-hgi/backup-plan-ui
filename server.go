@@ -14,17 +14,14 @@ type server struct {
 }
 
 var (
-	tmplRow          = parseTemplate("row.html")
-	tmplEditRow      = parseTemplate("edit_row.html")
-	tmplAddRow       = parseTemplate("add_row.html")
-	tmplDeleteDialog = parseTemplate("delete_modal.html")
+	tmplRow          = parseTemplate("templates/row.html")
+	tmplEditRow      = parseTemplate("templates/edit_row.html")
+	tmplAddRow       = parseTemplate("templates/add_row.html")
+	tmplDeleteDialog = parseTemplate("templates/delete_modal.html")
 )
 
-const templateDir = "templates/"
-
 func parseTemplate(name string) *template.Template {
-	return template.Must(
-		template.New(name).ParseFS(templateFiles, templateDir+name))
+	return template.Must(template.ParseFS(templateFiles, name))
 }
 
 func (s server) getEntries(w http.ResponseWriter, _ *http.Request) {
