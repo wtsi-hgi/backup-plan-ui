@@ -15,7 +15,7 @@
   <tbody>
     <tr hx-trigger='cancel' 
         class='editing' 
-        hx-get="/actions/cancel/new"
+        hx-get="actions/cancel/new"
         hx-target="#add-row-container" 
         hx-swap="innerHTML">
         <td>
@@ -84,12 +84,12 @@
         </td>
         <td>
             <button class="btn primary" 
-            hx-put="/actions/add"
+            hx-put="actions/add"
             hx-include="closest tr">
             Save
         </button>
         <button class="btn danger" 
-            hx-get="/actions/cancel/new">
+            hx-get="actions/cancel/new">
             Cancel
         </button>
         </td>

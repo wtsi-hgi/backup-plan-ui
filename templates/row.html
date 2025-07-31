@@ -9,13 +9,13 @@
     <td>{{.Faculty}}</td>
     <td>
       <button class="btn"
-            hx-get="/actions/edit/{{.ID}}" 
+            hx-get="actions/edit/{{.ID}}"
             hx-target="closest tr" 
             hx-swap="outerHTML">
         Edit
       </button>
       <button class="btn danger" 
-        hx-get="/actions/startDelete/{{.ID}}" 
+        hx-get="actions/startDelete/{{.ID}}"
         hx-target="body" 
         hx-swap="beforeend">
         Delete
