@@ -1,0 +1,43 @@
+name: Deploy Application
+
+on:
+  workflow_run:
+    workflows: ["Go Tests"]
+    types:
+      - completed
+
+jobs:
+  deploy:
+    name: Build and Deploy
+    runs-on: self-hosted
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    
+    # These environment variables must be configured in the repository settings
+    # DEPLOY_PATH: Path where the application will be deployed
+    # SERVICE_NAME: (Optional) Name of the systemd service to restart after deployment
+
+    environment: ${{ github.ref == 'refs/heads/main' && 'production' || 'development' }}
+      
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.24.4'
+          
+      - name: Install dependencies
+        run: go mod download
+        
+      - name: Build application
+        run: go build .
+        
+      - name: Deploy application
+        run: |
+          sudo mkdir -p ${{ env.DEPLOY_PATH }}
+          sudo cp backup-plan-ui ${{ env.DEPLOY_PATH }}/
+          
+      - name: Restart service
+        run: |
+          sudo systemctl restart ${{ env.SERVICE_NAME }}
