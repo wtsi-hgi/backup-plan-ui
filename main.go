@@ -31,8 +31,8 @@ type Entry struct {
 	ReportingRoot string      `csv:"reporting_root"`
 	Directory     string      `csv:"directory"`
 	Instruction   instruction `csv:"instruction"`
-	Match         string    `csv:"match"`
-	Ignore        string    `csv:"ignore"`
+	Match         string      `csv:"match"`
+	Ignore        string      `csv:"ignore"`
 	Requestor     string      `csv:"requestor"`
 	Faculty       string      `csv:"faculty"`
 	ID            uint16      `csv:"id"`
@@ -53,6 +53,11 @@ func main() {
 		db: CSVSource{dbPath},
 	}
 
+	port := os.Getenv("BACKUP_PLAN_UI_PORT")
+	if port == "" {
+		port = "4000"
+	}
+
 	r := chi.NewRouter()
 
 	r.Get("/", serveHome)
@@ -69,7 +74,7 @@ func main() {
 
 	r.Handle("/static/*", http.FileServerFS(staticFiles))
 
-	if err := http.ListenAndServe(":4000", r); err != nil {
+	if err := http.ListenAndServe(":"+port, r); err != nil {
 		log.Fatalf("Server failed to start: %v", err)
 	}
 }
