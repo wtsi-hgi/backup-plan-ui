@@ -1,14 +1,22 @@
 package main
 
 import (
+	"embed"
 	"fmt"
 	"html/template"
 	"log"
 	"net/http"
 	"os"
+	"path/filepath"
 
 	"github.com/go-chi/chi/v5"
 )
+
+//go:embed static
+var staticFiles embed.FS
+
+//go:embed templates
+var templateFiles embed.FS
 
 type instruction string
 
@@ -30,11 +38,11 @@ type Entry struct {
 	ID            uint16      `csv:"id"`
 }
 
-var tmpl = template.Must(template.ParseFiles("templates/index.html"))
+var tmpl = template.Must(template.ParseFS(templateFiles, templateDir+"index.html"))
 
 func main() {
 	if len(os.Args) != 2 {
-		fmt.Println("Usage: go run . <path-to-csv>")
+		fmt.Printf("Usage: %s <path-to-csv>\n", filepath.Base(os.Args[0]))
 		os.Exit(1)
 	}
 
@@ -59,7 +67,7 @@ func main() {
 	r.Get("/actions/add", server.showAddRowForm)
 	r.Put("/actions/add", server.addNewEntry)
 
-	r.Handle("/static/*", http.StripPrefix("/static/", http.FileServer(http.Dir("./static"))))
+	r.Handle("/static/*", http.FileServerFS(staticFiles))
 
 	if err := http.ListenAndServe(":4000", r); err != nil {
 		log.Fatalf("Server failed to start: %v", err)
