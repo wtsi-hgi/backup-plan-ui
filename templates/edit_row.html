@@ -20,10 +20,46 @@
         </select>
     </td>
     <td>
-        <input name='Match' value="{{join .Match}}">
+        <div x-data="tagInputComponent('{{.Match}}'.split(' ').map(t => t.trim()).filter(Boolean), 'Match')">
+            <div class="tag-container">
+              <template x-for="(tag, i) in tags" :key="i">
+                <div class="tag">
+                  <span x-text="tag"></span>
+                  <button type="button" @click="removeTag(i)">&times;</button>
+                </div>
+              </template>
+              <input
+                type="text"
+                x-model="newTag"
+                @keydown.enter.prevent="addTag"
+                @keydown.space.prevent="addTag"
+                @blur="addTag"
+                placeholder="..."
+              >
+            </div>
+            <input type="hidden" :name="name" :value="tags.join(' ')">
+        </div>
     </td>
-    <td>
-        <input name='Ignore' value="{{join .Ignore}}">
+    <td>   
+        <div x-data="tagInputComponent('{{.Ignore}}'.split(' ').map(t => t.trim()).filter(Boolean), 'Ignore')">
+            <div class="tag-container">
+              <template x-for="(tag, i) in tags" :key="i">
+                <div class="tag">
+                  <span x-text="tag"></span>
+                  <button type="button" @click="removeTag(i)">&times;</button>
+                </div>
+              </template>
+              <input
+                type="text"
+                x-model="newTag"
+                @keydown.enter.prevent="addTag"
+                @keydown.space.prevent="addTag"
+                @blur="addTag"
+                placeholder="..."
+              >
+            </div>
+            <input type="hidden" :name="name" :value="tags.join(' ')">
+        </div>
     </td>
     <td>
         <input name='Requestor' value="{{.Requestor}}">
@@ -43,4 +79,3 @@
         </button>
     </td>
   </tr>
-  

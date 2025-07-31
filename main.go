@@ -31,14 +31,14 @@ type Entry struct {
 	ReportingRoot string      `csv:"reporting_root"`
 	Directory     string      `csv:"directory"`
 	Instruction   instruction `csv:"instruction"`
-	Match         []string    `csv:"match"`
-	Ignore        []string    `csv:"ignore"`
+	Match         string    `csv:"match"`
+	Ignore        string    `csv:"ignore"`
 	Requestor     string      `csv:"requestor"`
 	Faculty       string      `csv:"faculty"`
 	ID            uint16      `csv:"id"`
 }
 
-var tmpl = template.Must(template.ParseFS(templateFiles, templateDir+"index.html"))
+var tmpl = template.Must(template.ParseFS(templateFiles, "templates/index.html"))
 
 func main() {
 	if len(os.Args) != 2 {

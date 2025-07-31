@@ -5,7 +5,6 @@ import (
 	"html/template"
 	"net/http"
 	"strconv"
-	"strings"
 
 	"github.com/go-chi/chi/v5"
 )
@@ -15,25 +14,14 @@ type server struct {
 }
 
 var (
-	tmplRow          = parseTemplate("row.html")
-	tmplEditRow      = parseTemplate("edit_row.html")
-	tmplAddRow       = parseTemplate("add_row.html")
-	tmplDeleteDialog = parseTemplate("delete_modal.html")
+	tmplRow          = parseTemplate("templates/row.html")
+	tmplEditRow      = parseTemplate("templates/edit_row.html")
+	tmplAddRow       = parseTemplate("templates/add_row.html")
+	tmplDeleteDialog = parseTemplate("templates/delete_modal.html")
 )
 
-const templateDir = "templates/"
-
 func parseTemplate(name string) *template.Template {
-	return template.Must(
-		template.New(name).
-			Funcs(template.FuncMap{
-				"join": joinCommaSpace,
-			}).
-			ParseFS(templateFiles, templateDir+name))
-}
-
-func joinCommaSpace(items []string) string {
-	return strings.Join(items, ", ")
+	return template.Must(template.ParseFS(templateFiles, name))
 }
 
 func (s server) getEntries(w http.ResponseWriter, _ *http.Request) {
@@ -121,27 +109,11 @@ func createEntryFromForm(id uint16, r *http.Request) *Entry {
 		ReportingRoot: r.FormValue("ReportingRoot"),
 		Directory:     r.FormValue("Directory"),
 		Instruction:   instruction(r.FormValue("Instruction")),
-		Match:         splitList(r.FormValue("Match")),
-		Ignore:        splitList(r.FormValue("Ignore")),
+		Match:         r.FormValue("Match"),
+		Ignore:        r.FormValue("Ignore"),
 		Requestor:     r.FormValue("Requestor"),
 		Faculty:       r.FormValue("Faculty"),
 	}
-}
-
-func splitList(value string) []string {
-	parts := strings.FieldsFunc(value, func(r rune) bool {
-		return r == ',' || r == '\n'
-	})
-
-	var cleaned []string
-	for _, part := range parts {
-		part = strings.TrimSpace(part)
-		if part != "" {
-			cleaned = append(cleaned, part)
-		}
-	}
-
-	return cleaned
 }
 
 func (s server) deleteRow(w http.ResponseWriter, r *http.Request) {

@@ -4,36 +4,10 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
-	"reflect"
 	"testing"
 
 	. "github.com/smarty/assertions"
 )
-
-func TestSplitList(t *testing.T) {
-	expectedList := []string{"item1", "item2", "item3"}
-
-	var tests = []struct {
-		listToSplit, testName string
-	}{
-		{"item1, item2, item3", "comma separated"},
-		{"item1\nitem2\nitem3", "line break seperated"},
-		{"item1,\nitem2,\n,item3", "line break and comma seperated"},
-		{"item1, , ,,  item2, \n,item3", "mixture of separators"},
-	}
-
-	for _, tt := range tests {
-		testname := tt.testName
-		t.Run(testname, func(t *testing.T) {
-			splitList := splitList(tt.listToSplit)
-
-			if !reflect.DeepEqual(splitList, expectedList) {
-				t.Errorf("List was not split properly.\nGot %+v, expected %+v",
-					splitList, expectedList)
-			}
-		})
-	}
-}
 
 func TestShowAddRowForm(t *testing.T) {
 	s := server{}
@@ -43,6 +17,43 @@ func TestShowAddRowForm(t *testing.T) {
 
 	s.showAddRowForm(w, r)
 
+	body := getBodyAndCheckStatusOK(t, w)
+
+	if ok, err := So(body, ShouldContainSubstring, "<table"); !ok {
+		t.Error(err)
+	}
+}
+
+func TestGetEntries(t *testing.T) {
+	s, originalEntries := createServer(t)
+
+	req := httptest.NewRequest(http.MethodGet, "/entries", nil)
+	w := httptest.NewRecorder()
+
+	s.getEntries(w, req)
+
+	body := getBodyAndCheckStatusOK(t, w)
+
+	for _, entry := range originalEntries {
+		if ok, err := So(string(body), ShouldContainSubstring, entry.ReportingName); !ok {
+			t.Error(err)
+		}
+	}
+}
+
+func createServer(t *testing.T) (server, []*Entry) {
+	t.Helper()
+
+	entries, dbPath := createTestData(t)
+
+	server := server{
+		db: CSVSource{dbPath},
+	}
+
+	return server, entries
+}
+
+func getBodyAndCheckStatusOK(t *testing.T, w *httptest.ResponseRecorder) string {
 	res := w.Result()
 	defer res.Body.Close()
 
@@ -55,7 +66,5 @@ func TestShowAddRowForm(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if ok, err := So(string(body), ShouldContainSubstring, "<table"); !ok {
-		t.Error(err)
-	}
+	return string(body)
 }
