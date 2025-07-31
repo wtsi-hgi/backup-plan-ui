@@ -1,9 +1,12 @@
 package main
 
 import (
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
+	"strings"
 	"testing"
 
 	. "github.com/smarty/assertions"
@@ -41,6 +44,49 @@ func TestGetEntries(t *testing.T) {
 	}
 }
 
+func TestAddNewEntry(t *testing.T) {
+	s, _ := createServer(t)
+
+	exampleFormData := map[string]string{
+		"ReportingName": "test_report",
+		"ReportingRoot": "test_root",
+		"Directory":     "some/nested/dir",
+		"Instruction":   "testInstruction",
+		"Match":         "",
+		"Ignore":        "",
+		"Requestor":     "test_user",
+		"Faculty":       "test_group",
+	}
+
+	createAndAddForm := func(map[string]string) string {
+		form := createForm(exampleFormData)
+
+		req := httptest.NewRequest(http.MethodPut, "/actions/add", strings.NewReader(form.Encode()))
+		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		w := httptest.NewRecorder()
+
+		s.addNewEntry(w, req)
+
+		return getBodyAndCheckStatusOK(t, w)
+	}
+
+	for fieldName := range exampleFormData {
+		if fieldName == "Match" || fieldName == "Ignore" {
+			continue
+		}
+
+		t.Run(fmt.Sprintf("Blank %s", fieldName), func(t *testing.T) {
+			exampleFormData[fieldName] = ""
+
+			body := createAndAddForm(exampleFormData)
+
+			if ok, err := So(body, ShouldContainSubstring, "You cannot leave this field blank"); !ok {
+				t.Error(err)
+			}
+		})
+	}
+}
+
 func createServer(t *testing.T) (server, []*Entry) {
 	t.Helper()
 
@@ -67,4 +113,20 @@ func getBodyAndCheckStatusOK(t *testing.T, w *httptest.ResponseRecorder) string 
 	}
 
 	return string(body)
+}
+
+func createForm(data map[string]string) url.Values {
+	form := make(url.Values)
+
+	for key, value := range data {
+		form.Set(key, value)
+	}
+
+	return form
+}
+
+func updateDataValue(origMap map[string]string, key, value string) map[string]string {
+	origMap[key] = value
+
+	return origMap
 }

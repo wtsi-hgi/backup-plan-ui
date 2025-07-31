@@ -19,23 +19,35 @@
         hx-target="#add-row-container" 
         hx-swap="innerHTML">
         <td>
-            <input autofocus name='ReportingName' value="">
+            <input autofocus name='ReportingName' value="{{.Entry.ReportingName}}">
+            {{with index .Errors "ReportingName"}}
+              <div style="color:red">{{.}}</div>
+            {{end}}
         </td>
         <td>
-            <input name='ReportingRoot' value="">
+            <input name='ReportingRoot' value="{{.Entry.ReportingRoot}}">
+            {{with index .Errors "ReportingRoot"}}
+              <div style="color:red">{{.}}</div>
+            {{end}}
         </td>
         <td>
-            <input name='Directory' value="">
+            <input name='Directory' value="{{.Entry.Directory}}">
+            {{with index .Errors "Directory"}}
+              <div style="color:red">{{.}}</div>
+            {{end}}
         </td>
         <td>
             <select name="Instruction">
-                <option value="backup" {{if eq .Instruction "backup"}}selected{{end}}>backup</option>
-                <option value="nobackup" {{if eq .Instruction "nobackup"}}selected{{end}}>nobackup</option>
-                <option value="tempbackup" {{if eq .Instruction "tempbackup"}}selected{{end}}>tempbackup</option>
+                <option value="backup" {{if eq .Entry.Instruction "backup"}}selected{{end}}>backup</option>
+                <option value="nobackup" {{if eq .Entry.Instruction "nobackup"}}selected{{end}}>nobackup</option>
+                <option value="tempbackup" {{if eq .Entry.Instruction "tempbackup"}}selected{{end}}>tempbackup</option>
             </select>
+            {{with index .Errors "Instruction"}}
+              <div style="color:red">{{.}}</div>
+            {{end}}
         </td>
         <td>
-            <div x-data="tagInputComponent('{{.Match}}'.split(' ').map(t => t.trim()).filter(Boolean), 'Match')">
+            <div x-data="tagInputComponent('{{.Entry.Match}}'.split(' ').map(t => t.trim()).filter(Boolean), 'Match')">
                 <div class="tag-container">
                   <template x-for="(tag, i) in tags" :key="i">
                     <div class="tag">
@@ -56,7 +68,7 @@
             </div>
         </td>
         <td>   
-            <div x-data="tagInputComponent('{{.Ignore}}'.split(' ').map(t => t.trim()).filter(Boolean), 'Ignore')">
+            <div x-data="tagInputComponent('{{.Entry.Ignore}}'.split(' ').map(t => t.trim()).filter(Boolean), 'Ignore')">
                 <div class="tag-container">
                   <template x-for="(tag, i) in tags" :key="i">
                     <div class="tag">
@@ -77,10 +89,16 @@
             </div>
         </td>
         <td>
-            <input name='Requestor' value="">
+            <input name='Requestor' value="{{.Entry.Requestor}}">
+            {{with index .Errors "Requestor"}}
+              <div style="color:red">{{.}}</div>
+            {{end}}
         </td>
         <td>
-            <input name='Faculty' value="">
+            <input name='Faculty' value="{{.Entry.Faculty}}">
+            {{with index .Errors "Faculty"}}
+              <div style="color:red">{{.}}</div>
+            {{end}}
         </td>
         <td>
             <button class="btn primary" 
