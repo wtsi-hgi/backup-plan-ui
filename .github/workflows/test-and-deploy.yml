@@ -56,6 +56,11 @@ jobs:
       - name: Build application
         run: go build .
 
+      - name: Stop application
+        run: |
+          sudo systemctl stop ${{ vars.SERVICE_NAME }}
+        continue-on-error: true
+
       - name: Deploy application
         run: |
           echo ${{ github.ref }}
