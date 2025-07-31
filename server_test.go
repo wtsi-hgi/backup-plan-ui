@@ -44,13 +44,11 @@ func TestGetEntries(t *testing.T) {
 	}
 }
 
-func TestAddNewEntry(t *testing.T) {
-	s, _ := createServer(t)
-
+func TestValidateForm(t *testing.T) {
 	exampleFormData := map[string]string{
 		"ReportingName": "test_report",
-		"ReportingRoot": "test_root",
-		"Directory":     "some/nested/dir",
+		"ReportingRoot": "a/",
+		"Directory":     "a/b/c/d/e`",
 		"Instruction":   "testInstruction",
 		"Match":         "",
 		"Ignore":        "",
@@ -58,16 +56,13 @@ func TestAddNewEntry(t *testing.T) {
 		"Faculty":       "test_group",
 	}
 
-	createAndAddForm := func(map[string]string) string {
-		form := createForm(exampleFormData)
-
-		req := httptest.NewRequest(http.MethodPut, "/actions/add", strings.NewReader(form.Encode()))
+	makeRequest := func(data map[string]string) *http.Request {
+		form := createForm(data)
+		req := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(form.Encode()))
 		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-		w := httptest.NewRecorder()
+		_ = req.ParseForm()
 
-		s.addNewEntry(w, req)
-
-		return getBodyAndCheckStatusOK(t, w)
+		return req
 	}
 
 	for fieldName := range exampleFormData {
@@ -76,12 +71,73 @@ func TestAddNewEntry(t *testing.T) {
 		}
 
 		t.Run(fmt.Sprintf("Blank %s", fieldName), func(t *testing.T) {
-			exampleFormData[fieldName] = ""
+			data := cloneMap(exampleFormData)
+			data[fieldName] = ""
 
-			body := createAndAddForm(exampleFormData)
+			req := makeRequest(data)
+			errors, err := validateForm(req)
+			if err != nil {
+				t.Fatal(err)
+			}
 
-			if ok, err := So(body, ShouldContainSubstring, "You cannot leave this field blank"); !ok {
-				t.Error(err)
+			if got := errors[fieldName]; got != ErrBlankInput {
+				t.Errorf("Expected error for %s: %q, got: %q", fieldName, ErrBlankInput, got)
+			}
+		})
+	}
+
+	tests := []struct {
+		name        string
+		formData    map[string]string
+		KeyForErr   string
+		expectedErr string
+	}{
+		{
+			name:        "invalid instruction input",
+			formData:    cloneAndUpdateMapValue(exampleFormData, "Instruction", "invalid"),
+			KeyForErr:   "Instruction",
+			expectedErr: ErrInvalidInstruction,
+		},
+		{
+			name: "Ignore when instruction is not backup",
+			formData: func() map[string]string {
+				data := cloneMap(exampleFormData)
+				data["Instruction"] = "nobackup"
+				data["Ignore"] = "*.txt"
+				return data
+			}(),
+			KeyForErr:   "Ignore",
+			expectedErr: ErrIgnoreWithoutBackup,
+		},
+		{
+			name:        "Directory not deep enough",
+			formData:    cloneAndUpdateMapValue(exampleFormData, "Directory", "a/shallow/dir"),
+			KeyForErr:   "Directory",
+			expectedErr: ErrDirectoryNotDeepEnough,
+		},
+		{
+			name: "Directory not in Reporting root",
+			formData: func() map[string]string {
+				data := cloneMap(exampleFormData)
+				data["ReportingRoot"] = "some/parent/"
+				data["Directory"] = "some/other/parent/nested/dir"
+				return data
+			}(),
+			KeyForErr:   "Directory",
+			expectedErr: ErrDirectoryNotInRoot,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			req := makeRequest(test.formData)
+			errors, err := validateForm(req)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			if got := errors[test.KeyForErr]; got != test.expectedErr {
+				t.Errorf("Expected error for %s: %q, got: %q", test.KeyForErr, test.expectedErr, got)
 			}
 		})
 	}
@@ -125,8 +181,18 @@ func createForm(data map[string]string) url.Values {
 	return form
 }
 
-func updateDataValue(origMap map[string]string, key, value string) map[string]string {
-	origMap[key] = value
+func cloneAndUpdateMapValue(origMap map[string]string, key, value string) map[string]string {
+	newMap := cloneMap(origMap)
+	newMap[key] = value
 
-	return origMap
+	return newMap
+}
+
+func cloneMap(original map[string]string) map[string]string {
+	cloned := make(map[string]string)
+	for k, v := range original {
+		cloned[k] = v
+	}
+
+	return cloned
 }

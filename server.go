@@ -4,7 +4,9 @@ import (
 	"fmt"
 	"html/template"
 	"net/http"
+	"path/filepath"
 	"strconv"
+	"strings"
 
 	"github.com/go-chi/chi/v5"
 )
@@ -18,6 +20,14 @@ var (
 	tmplEditRow      = parseTemplate("templates/edit_row.html")
 	tmplAddRow       = parseTemplate("templates/add_row.html")
 	tmplDeleteDialog = parseTemplate("templates/delete_modal.html")
+)
+
+const (
+	ErrBlankInput             = "You cannot leave this field blank"
+	ErrInvalidInstruction     = "Input must be backup, tempBackup or noBackup"
+	ErrIgnoreWithoutBackup    = "Ignore can only be used with the backup instruction"
+	ErrDirectoryNotInRoot     = "Directory must be inside Reporting root"
+	ErrDirectoryNotDeepEnough = "Directory must be atleast five levels deep"
 )
 
 func parseTemplate(name string) *template.Template {
@@ -113,7 +123,12 @@ func (s server) submitEdits(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	validationErrors := validateNonBlankInputs(r)
+	validationErrors, err := validateForm(r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+
+		return
+	}
 
 	updatedEntry := createEntryFromForm(uint16(id), r)
 
@@ -154,6 +169,18 @@ func createEntryFromForm(id uint16, r *http.Request) *Entry {
 	}
 }
 
+func validateForm(r *http.Request) (map[string]string, error) {
+	errors := validateNonBlankInputs(r)
+
+	if len(errors) > 0 {
+		return errors, nil
+	}
+
+	validateInstructionAndIgnore(r, errors)
+
+	return errors, validateDirectory(r, errors)
+}
+
 func validateNonBlankInputs(r *http.Request) map[string]string {
 	requiredFields := []string{"ReportingName", "ReportingRoot", "Directory",
 		"Instruction", "Requestor", "Faculty"}
@@ -162,11 +189,55 @@ func validateNonBlankInputs(r *http.Request) map[string]string {
 
 	for _, requiredField := range requiredFields {
 		if r.FormValue(requiredField) == "" {
-			validateMap[requiredField] = "You cannot leave this field blank"
+			validateMap[requiredField] = ErrBlankInput
 		}
 	}
 
 	return validateMap
+}
+
+func validateInstructionAndIgnore(r *http.Request, errors map[string]string) {
+	instr := instruction(r.FormValue("Instruction"))
+	ignore := r.FormValue("Ignore")
+
+	if instr != Backup && instr != TempBackup && instr != NoBackup {
+		errors["Instruction"] = ErrInvalidInstruction
+	}
+
+	if ignore != "" && instr != Backup {
+		errors["Ignore"] = ErrIgnoreWithoutBackup
+	}
+}
+
+func validateDirectory(r *http.Request, errors map[string]string) error {
+	reportingRoot := r.FormValue("ReportingRoot")
+	dir := r.FormValue("Directory")
+
+	if !strings.HasSuffix(dir, "/") {
+		dir += "/"
+	}
+
+	rel, err := filepath.Rel(reportingRoot, dir)
+	if err != nil {
+		return err
+	}
+
+	if strings.HasPrefix(rel, "../") || rel == ".." {
+		errors["Directory"] = ErrDirectoryNotInRoot
+	}
+
+	depth := 0
+	for _, part := range strings.Split(dir, string(filepath.Separator)) {
+		if part != "" {
+			depth++
+		}
+	}
+
+	if depth < 5 {
+		errors["Directory"] = ErrDirectoryNotDeepEnough
+	}
+
+	return nil
 }
 
 func (s server) deleteRow(w http.ResponseWriter, r *http.Request) {
@@ -211,7 +282,12 @@ func (s server) addNewEntry(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	validationErrors := validateNonBlankInputs(r)
+	validationErrors, err := validateForm(r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+
+		return
+	}
 
 	var dummyEntryID uint16 // will be set later
 	newEntry := createEntryFromForm(dummyEntryID, r)

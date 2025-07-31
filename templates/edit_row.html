@@ -51,6 +51,9 @@
             </div>
             <input type="hidden" :name="name" :value="tags.join(' ')">
         </div>
+        {{with index .Errors "Match"}}
+          <div style="color:red">{{.}}</div>
+        {{end}}
     </td>
     <td>   
         <div x-data="tagInputComponent('{{.Entry.Ignore}}'.split(' ').map(t => t.trim()).filter(Boolean), 'Ignore')">
@@ -72,6 +75,9 @@
             </div>
             <input type="hidden" :name="name" :value="tags.join(' ')">
         </div>
+        {{with index .Errors "Ignore"}}
+          <div style="color:red">{{.}}</div>
+        {{end}}
     </td>
     <td>
         <input name='Requestor' value="{{.Entry.Requestor}}">
