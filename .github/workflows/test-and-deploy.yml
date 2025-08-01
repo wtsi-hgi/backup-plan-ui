@@ -1,0 +1,72 @@
+name: Test and Deploy
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+  pull_request:
+    branches:
+      - main
+      - develop
+
+jobs:
+  test:
+    name: Run Tests
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+      
+    - name: Set up Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: '1.24.4'
+        
+    - name: Install dependencies
+      run: go mod download
+        
+    - name: Run tests
+      run: go test -v ./...
+
+  deploy:
+    name: Build and Deploy
+    runs-on: self-hosted
+    needs: test
+
+    # These environment variables must be configured in the repository settings
+    # DEPLOY_PATH: Path where the application will be deployed
+    # SERVICE_NAME: Name of the systemd service to restart after deployment
+
+    environment: ${{ github.ref == 'refs/heads/main' && 'production' || 'development' }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.24.4'
+
+      - name: Install dependencies
+        run: go mod download
+
+      - name: Build application
+        run: go build .
+
+      - name: Stop application
+        run: |
+          sudo systemctl stop ${{ vars.SERVICE_NAME }}
+        continue-on-error: true
+
+      - name: Deploy application
+        run: |
+          echo ${{ github.ref }}
+          sudo mkdir -p ${{ vars.DEPLOY_PATH }}
+          sudo cp backup-plan-ui ${{ vars.DEPLOY_PATH }}/
+
+      - name: Restart service
+        run: |
+          sudo systemctl restart ${{ vars.SERVICE_NAME }}
