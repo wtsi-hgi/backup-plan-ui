@@ -1,11 +1,16 @@
 package main
 
 import (
+	"context"
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
+	"strings"
 	"testing"
 
+	"github.com/go-chi/chi/v5"
 	. "github.com/smarty/assertions"
 )
 
@@ -41,6 +46,236 @@ func TestGetEntries(t *testing.T) {
 	}
 }
 
+func TestSubmitEdits(t *testing.T) {
+	s, originalEntries := createServer(t)
+
+	entryToEdit := originalEntries[0]
+
+	tests := []struct {
+		name     string
+		entry    Entry
+		newValue string
+	}{
+		{
+			name: "You can edit Reporting Name",
+			entry: func() Entry {
+				entry := *entryToEdit
+				entry.ReportingName = "NewName"
+
+				return entry
+			}(),
+			newValue: "NewName",
+		},
+		{
+			name: "You can edit Reporting Root",
+			entry: func() Entry {
+				entry := *entryToEdit
+				entry.ReportingRoot = "/new/root"
+				entry.Directory = "/new/root/to/project/dir"
+
+				return entry
+			}(),
+			newValue: "/new/root",
+		},
+		{
+			name: "You can edit Directory",
+			entry: func() Entry {
+				entry := *entryToEdit
+				entry.Directory = "/some/path/to/project/a/new/input"
+
+				return entry
+			}(),
+			newValue: "/some/path/to/project/a/new/input",
+		},
+		{
+			name: "You can edit Instruction",
+			entry: func() Entry {
+				entry := *entryToEdit
+				entry.Instruction = NoBackup
+
+				return entry
+			}(),
+			newValue: string(NoBackup),
+		},
+		{
+			name: "You can edit Match",
+			entry: func() Entry {
+				entry := *entryToEdit
+				entry.Match = "*.csv *.txt"
+
+				return entry
+			}(),
+			newValue: "*.csv *.txt",
+		},
+		{
+			name: "You can edit Ignore",
+			entry: func() Entry {
+				entry := *entryToEdit
+				entry.Instruction = Backup
+				entry.Ignore = "*.txt"
+
+				return entry
+			}(),
+			newValue: "*.txt",
+		},
+		{
+			name: "You can edit Requestor",
+			entry: func() Entry {
+				entry := *entryToEdit
+				entry.Requestor = "NewRequestor"
+
+				return entry
+			}(),
+			newValue: "NewRequestor",
+		},
+		{
+			name: "You can edit Faculty",
+			entry: func() Entry {
+				entry := *entryToEdit
+				entry.Faculty = "NewFaculty"
+
+				return entry
+			}(),
+			newValue: "NewFaculty",
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			form := createFormFromEntry(test.entry)
+			req := makeFormRequest(form, fmt.Sprintf("/actions/submit/%d", test.entry.ID), fmt.Sprintf("%d", test.entry.ID))
+
+			w := httptest.NewRecorder()
+
+			s.submitEdits(w, req)
+
+			body := getBodyAndCheckStatusOK(t, w)
+
+			if ok, err := So(body, ShouldContainSubstring, test.newValue); !ok {
+				t.Error(err)
+			}
+
+			changedEntry, err := s.db.getEntry(test.entry.ID)
+			if err != nil {
+				t.Error(err)
+			}
+
+			if ok, err := So(*changedEntry, ShouldResemble, test.entry); !ok {
+				t.Error(err)
+			}
+
+			if ok, err := So(changedEntry, ShouldNotResemble, entryToEdit); !ok {
+				t.Error(err)
+			}
+		})
+	}
+}
+
+func createFormFromEntry(entry Entry) url.Values {
+	form := make(url.Values)
+
+	form.Set("ReportingName", entry.ReportingName)
+	form.Set("ReportingRoot", entry.ReportingRoot)
+	form.Set("Directory", entry.Directory)
+	form.Set("Instruction", string(entry.Instruction))
+	form.Set("Match", entry.Match)
+	form.Set("Ignore", entry.Ignore)
+	form.Set("Requestor", entry.Requestor)
+	form.Set("Faculty", entry.Faculty)
+
+	return form
+}
+
+func TestValidateForm(t *testing.T) {
+	exampleFormData := map[string]string{
+		"ReportingName": "test_report",
+		"ReportingRoot": "/a/",
+		"Directory":     "/a/b/c/d/e`",
+		"Instruction":   "testInstruction",
+		"Match":         "",
+		"Ignore":        "",
+		"Requestor":     "test_user",
+		"Faculty":       "test_group",
+	}
+
+	for fieldName := range exampleFormData {
+		if fieldName == "Match" || fieldName == "Ignore" {
+			continue
+		}
+
+		t.Run(fmt.Sprintf("Blank %s", fieldName), func(t *testing.T) {
+			data := cloneMap(exampleFormData)
+			data[fieldName] = ""
+
+			req := makeFormRequest(createFormFromMap(data), "/", "")
+			errors := validateForm(req)
+
+			if got := errors[fieldName]; got != ErrBlankInput {
+				t.Errorf("Expected error for %s: %q, got: %q", fieldName, ErrBlankInput, got)
+			}
+		})
+	}
+
+	tests := []struct {
+		name        string
+		formData    map[string]string
+		KeyForErr   string
+		expectedErr string
+	}{
+		{
+			name:        "Invalid instruction input",
+			formData:    cloneAndUpdateMapValue(exampleFormData, "Instruction", "invalid"),
+			KeyForErr:   "Instruction",
+			expectedErr: ErrInvalidInstruction,
+		},
+		{
+			name: "Ignore when instruction is not backup",
+			formData: func() map[string]string {
+				data := cloneMap(exampleFormData)
+				data["Instruction"] = "nobackup"
+				data["Ignore"] = "*.txt"
+				return data
+			}(),
+			KeyForErr:   "Ignore",
+			expectedErr: ErrIgnoreWithoutBackup,
+		},
+		{
+			name:        "Reporting root doesn't start with a slash",
+			formData:    cloneAndUpdateMapValue(exampleFormData, "ReportingRoot", "some/dir"),
+			KeyForErr:   "ReportingRoot",
+			expectedErr: ErrRootWithoutSlash,
+		},
+		{
+			name:        "Directory not deep enough",
+			formData:    cloneAndUpdateMapValue(exampleFormData, "Directory", "/a/shallow/dir"),
+			KeyForErr:   "Directory",
+			expectedErr: ErrDirectoryNotDeepEnough,
+		},
+		{
+			name: "Directory not in Reporting root",
+			formData: func() map[string]string {
+				data := cloneMap(exampleFormData)
+				data["ReportingRoot"] = "/some/parent/"
+				data["Directory"] = "/some/other/parent/nested/dir"
+				return data
+			}(),
+			KeyForErr:   "Directory",
+			expectedErr: ErrDirectoryNotInRoot,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			req := makeFormRequest(createFormFromMap(test.formData), "/", "")
+			errors := validateForm(req)
+
+			if got := errors[test.KeyForErr]; got != test.expectedErr {
+				t.Errorf("Expected error for %s: %q, got: %q", test.KeyForErr, test.expectedErr, got)
+			}
+		})
+	}
+}
+
 func createServer(t *testing.T) (server, []*Entry) {
 	t.Helper()
 
@@ -67,4 +302,43 @@ func getBodyAndCheckStatusOK(t *testing.T, w *httptest.ResponseRecorder) string 
 	}
 
 	return string(body)
+}
+
+func makeFormRequest(form url.Values, endpoint string, id string) *http.Request {
+	req := httptest.NewRequest(http.MethodPut, endpoint, strings.NewReader(form.Encode()))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+	_ = req.ParseForm()
+
+	rctx := chi.NewRouteContext()
+	rctx.URLParams.Add("id", id)
+	req = req.WithContext(context.WithValue(req.Context(), chi.RouteCtxKey, rctx))
+
+	return req
+}
+
+func createFormFromMap(data map[string]string) url.Values {
+	form := make(url.Values)
+
+	for key, value := range data {
+		form.Set(key, value)
+	}
+
+	return form
+}
+
+func cloneAndUpdateMapValue(origMap map[string]string, key, value string) map[string]string {
+	newMap := cloneMap(origMap)
+	newMap[key] = value
+
+	return newMap
+}
+
+func cloneMap(original map[string]string) map[string]string {
+	cloned := make(map[string]string)
+	for k, v := range original {
+		cloned[k] = v
+	}
+
+	return cloned
 }
