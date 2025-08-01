@@ -47,8 +47,8 @@ func TestGetEntries(t *testing.T) {
 func TestValidateForm(t *testing.T) {
 	exampleFormData := map[string]string{
 		"ReportingName": "test_report",
-		"ReportingRoot": "a/",
-		"Directory":     "a/b/c/d/e`",
+		"ReportingRoot": "/a/",
+		"Directory":     "/a/b/c/d/e`",
 		"Instruction":   "testInstruction",
 		"Match":         "",
 		"Ignore":        "",
@@ -56,7 +56,7 @@ func TestValidateForm(t *testing.T) {
 		"Faculty":       "test_group",
 	}
 
-	makeRequest := func(data map[string]string) *http.Request {
+	makeFormRequest := func(data map[string]string) *http.Request {
 		form := createForm(data)
 		req := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(form.Encode()))
 		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
@@ -74,11 +74,8 @@ func TestValidateForm(t *testing.T) {
 			data := cloneMap(exampleFormData)
 			data[fieldName] = ""
 
-			req := makeRequest(data)
-			errors, err := validateForm(req)
-			if err != nil {
-				t.Fatal(err)
-			}
+			req := makeFormRequest(data)
+			errors := validateForm(req)
 
 			if got := errors[fieldName]; got != ErrBlankInput {
 				t.Errorf("Expected error for %s: %q, got: %q", fieldName, ErrBlankInput, got)
@@ -93,7 +90,7 @@ func TestValidateForm(t *testing.T) {
 		expectedErr string
 	}{
 		{
-			name:        "invalid instruction input",
+			name:        "Invalid instruction input",
 			formData:    cloneAndUpdateMapValue(exampleFormData, "Instruction", "invalid"),
 			KeyForErr:   "Instruction",
 			expectedErr: ErrInvalidInstruction,
@@ -110,8 +107,14 @@ func TestValidateForm(t *testing.T) {
 			expectedErr: ErrIgnoreWithoutBackup,
 		},
 		{
+			name:        "Reporting root doesn't start with a slash",
+			formData:    cloneAndUpdateMapValue(exampleFormData, "ReportingRoot", "some/dir"),
+			KeyForErr:   "ReportingRoot",
+			expectedErr: ErrRootWithoutSlash,
+		},
+		{
 			name:        "Directory not deep enough",
-			formData:    cloneAndUpdateMapValue(exampleFormData, "Directory", "a/shallow/dir"),
+			formData:    cloneAndUpdateMapValue(exampleFormData, "Directory", "/a/shallow/dir"),
 			KeyForErr:   "Directory",
 			expectedErr: ErrDirectoryNotDeepEnough,
 		},
@@ -119,8 +122,8 @@ func TestValidateForm(t *testing.T) {
 			name: "Directory not in Reporting root",
 			formData: func() map[string]string {
 				data := cloneMap(exampleFormData)
-				data["ReportingRoot"] = "some/parent/"
-				data["Directory"] = "some/other/parent/nested/dir"
+				data["ReportingRoot"] = "/some/parent/"
+				data["Directory"] = "/some/other/parent/nested/dir"
 				return data
 			}(),
 			KeyForErr:   "Directory",
@@ -130,11 +133,8 @@ func TestValidateForm(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			req := makeRequest(test.formData)
-			errors, err := validateForm(req)
-			if err != nil {
-				t.Fatal(err)
-			}
+			req := makeFormRequest(test.formData)
+			errors := validateForm(req)
 
 			if got := errors[test.KeyForErr]; got != test.expectedErr {
 				t.Errorf("Expected error for %s: %q, got: %q", test.KeyForErr, test.expectedErr, got)
