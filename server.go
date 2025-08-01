@@ -49,7 +49,7 @@ func (s server) getEntries(w http.ResponseWriter, _ *http.Request) {
 	}
 
 	for _, entry := range entries {
-		err = tmplRow.Execute(w, entry)
+		err = tmplRow.Execute(w, tmplData{Entry: entry})
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 		}
@@ -57,25 +57,7 @@ func (s server) getEntries(w http.ResponseWriter, _ *http.Request) {
 }
 
 func (s server) allowUserToEditRow(w http.ResponseWriter, r *http.Request) {
-	idStr := chi.URLParam(r, "id")
-	id, err := strconv.Atoi(idStr)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-	}
-
-	entry, err := s.db.getEntry(uint16(id))
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-	}
-
-	data := struct {
-		Entry  *Entry
-		Errors map[string]string
-	}{
-		Entry: entry,
-	}
-
-	err = tmplEditRow.Execute(w, data)
+	err := s.changeTemplate(w, r, tmplEditRow)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 	}
@@ -93,7 +75,7 @@ func (s server) changeTemplate(w http.ResponseWriter, r *http.Request, tmpl *tem
 		return err
 	}
 
-	return tmpl.Execute(w, entry)
+	return tmpl.Execute(w, tmplData{Entry: entry})
 }
 
 func (s server) resetView(w http.ResponseWriter, r *http.Request) {
@@ -102,6 +84,7 @@ func (s server) resetView(w http.ResponseWriter, r *http.Request) {
 	if idStr == "new" {
 		return
 	}
+
 	err := s.changeTemplate(w, r, tmplRow)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -185,8 +168,6 @@ func validateInstructionAndIgnore(r *http.Request, errors map[string]string) {
 	}
 }
 
-// addToMapIfNew only adds the value to the map if it's the first value for the
-// given key.
 func addToMapIfNew(givenMap map[string]string, key, value string) {
 	if _, exists := givenMap[key]; !exists {
 		givenMap[key] = value

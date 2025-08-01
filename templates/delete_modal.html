@@ -3,7 +3,7 @@
     <div class="modal-content">
       <h1 class="modal-header">Confirm Deletion</h1>
       <div class="modal-body">
-        <p>Are you sure you want to delete <strong>{{.ReportingName}}</strong>?</p>
+        <p>Are you sure you want to delete <strong>{{.Entry.ReportingName}}</strong>?</p>
       </div>
       <div class="modal-footer">
         <button class="btn primary" 
@@ -13,7 +13,7 @@
             Cancel
         </button>
         <button class="btn danger"
-            hx-get="actions/delete/{{.ID}}"
+            hx-get="actions/delete/{{.Entry.ID}}"
             hx-target="#modal"
             hx-swap="outerHTML">
             Delete
