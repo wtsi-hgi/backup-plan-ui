@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"net/http"
@@ -9,6 +10,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/go-chi/chi/v5"
 	. "github.com/smarty/assertions"
 )
 
@@ -44,6 +46,146 @@ func TestGetEntries(t *testing.T) {
 	}
 }
 
+func TestSubmitEdits(t *testing.T) {
+	s, originalEntries := createServer(t)
+
+	entryToEdit := originalEntries[0]
+
+	tests := []struct {
+		name     string
+		entry    Entry
+		newValue string
+	}{
+		{
+			name: "You can edit Reporting Name",
+			entry: func() Entry {
+				entry := *entryToEdit
+				entry.ReportingName = "NewName"
+
+				return entry
+			}(),
+			newValue: "NewName",
+		},
+		{
+			name: "You can edit Reporting Root",
+			entry: func() Entry {
+				entry := *entryToEdit
+				entry.ReportingRoot = "/new/root"
+				entry.Directory = "/new/root/to/project/dir"
+
+				return entry
+			}(),
+			newValue: "/new/root",
+		},
+		{
+			name: "You can edit Directory",
+			entry: func() Entry {
+				entry := *entryToEdit
+				entry.Directory = "/some/path/to/project/a/new/input"
+
+				return entry
+			}(),
+			newValue: "/some/path/to/project/a/new/input",
+		},
+		{
+			name: "You can edit Instruction",
+			entry: func() Entry {
+				entry := *entryToEdit
+				entry.Instruction = NoBackup
+
+				return entry
+			}(),
+			newValue: string(NoBackup),
+		},
+		{
+			name: "You can edit Match",
+			entry: func() Entry {
+				entry := *entryToEdit
+				entry.Match = "*.csv *.txt"
+
+				return entry
+			}(),
+			newValue: "*.csv *.txt",
+		},
+		{
+			name: "You can edit Ignore",
+			entry: func() Entry {
+				entry := *entryToEdit
+				entry.Instruction = Backup
+				entry.Ignore = "*.txt"
+
+				return entry
+			}(),
+			newValue: "*.txt",
+		},
+		{
+			name: "You can edit Requestor",
+			entry: func() Entry {
+				entry := *entryToEdit
+				entry.Requestor = "NewRequestor"
+
+				return entry
+			}(),
+			newValue: "NewRequestor",
+		},
+		{
+			name: "You can edit Faculty",
+			entry: func() Entry {
+				entry := *entryToEdit
+				entry.Faculty = "NewFaculty"
+
+				return entry
+			}(),
+			newValue: "NewFaculty",
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			form := createFormFromEntry(test.entry)
+			req := makeFormRequest(form, fmt.Sprintf("/actions/submit/%d", test.entry.ID), fmt.Sprintf("%d", test.entry.ID))
+
+			w := httptest.NewRecorder()
+
+			s.submitEdits(w, req)
+
+			body := getBodyAndCheckStatusOK(t, w)
+
+			if ok, err := So(body, ShouldContainSubstring, test.newValue); !ok {
+				t.Error(err)
+			}
+
+			changedEntry, err := s.db.getEntry(test.entry.ID)
+			if err != nil {
+				t.Error(err)
+			}
+
+			if ok, err := So(*changedEntry, ShouldResemble, test.entry); !ok {
+				t.Error(err)
+			}
+
+			if ok, err := So(changedEntry, ShouldNotResemble, entryToEdit); !ok {
+				t.Error(err)
+			}
+		})
+	}
+}
+
+func createFormFromEntry(entry Entry) url.Values {
+	form := make(url.Values)
+
+	form.Set("ReportingName", entry.ReportingName)
+	form.Set("ReportingRoot", entry.ReportingRoot)
+	form.Set("Directory", entry.Directory)
+	form.Set("Instruction", string(entry.Instruction))
+	form.Set("Match", entry.Match)
+	form.Set("Ignore", entry.Ignore)
+	form.Set("Requestor", entry.Requestor)
+	form.Set("Faculty", entry.Faculty)
+
+	return form
+}
+
 func TestValidateForm(t *testing.T) {
 	exampleFormData := map[string]string{
 		"ReportingName": "test_report",
@@ -56,15 +198,6 @@ func TestValidateForm(t *testing.T) {
 		"Faculty":       "test_group",
 	}
 
-	makeFormRequest := func(data map[string]string) *http.Request {
-		form := createForm(data)
-		req := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(form.Encode()))
-		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-		_ = req.ParseForm()
-
-		return req
-	}
-
 	for fieldName := range exampleFormData {
 		if fieldName == "Match" || fieldName == "Ignore" {
 			continue
@@ -74,7 +207,7 @@ func TestValidateForm(t *testing.T) {
 			data := cloneMap(exampleFormData)
 			data[fieldName] = ""
 
-			req := makeFormRequest(data)
+			req := makeFormRequest(createFormFromMap(data), "/", "")
 			errors := validateForm(req)
 
 			if got := errors[fieldName]; got != ErrBlankInput {
@@ -133,7 +266,7 @@ func TestValidateForm(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			req := makeFormRequest(test.formData)
+			req := makeFormRequest(createFormFromMap(test.formData), "/", "")
 			errors := validateForm(req)
 
 			if got := errors[test.KeyForErr]; got != test.expectedErr {
@@ -171,7 +304,20 @@ func getBodyAndCheckStatusOK(t *testing.T, w *httptest.ResponseRecorder) string 
 	return string(body)
 }
 
-func createForm(data map[string]string) url.Values {
+func makeFormRequest(form url.Values, endpoint string, id string) *http.Request {
+	req := httptest.NewRequest(http.MethodPut, endpoint, strings.NewReader(form.Encode()))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+	_ = req.ParseForm()
+
+	rctx := chi.NewRouteContext()
+	rctx.URLParams.Add("id", id)
+	req = req.WithContext(context.WithValue(req.Context(), chi.RouteCtxKey, rctx))
+
+	return req
+}
+
+func createFormFromMap(data map[string]string) url.Values {
 	form := make(url.Values)
 
 	for key, value := range data {

@@ -104,8 +104,8 @@ func createTestData(t *testing.T) ([]*Entry, string) {
 
 	baseEntry := Entry{
 		ReportingName: "test_project",
-		ReportingRoot: "/path/to/project",
-		Directory:     "/path/to/project/input",
+		ReportingRoot: "/some/path/to/project",
+		Directory:     "/some/path/to/project/input",
 		Instruction:   Backup,
 		Requestor:     "user",
 		Faculty:       "group",
