@@ -245,10 +245,12 @@ func createEntryFromForm(id uint16, r *http.Request) *Entry {
 }
 
 func convertErrors(errs map[formField]string) map[string]string {
-	result := make(map[string]string)
+	result := make(map[string]string, len(errs))
+
 	for k, v := range errs {
 		result[k.string()] = v
 	}
+
 	return result
 }
 

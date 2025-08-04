@@ -335,7 +335,8 @@ func cloneAndUpdateMapValue(origMap map[formField]string, key formField, value s
 }
 
 func cloneMap(original map[formField]string) map[formField]string {
-	cloned := make(map[formField]string)
+	cloned := make(map[formField]string, len(original))
+
 	for k, v := range original {
 		cloned[k] = v
 	}
