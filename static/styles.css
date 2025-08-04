@@ -19,6 +19,8 @@ th, td {
 th {
     background-color: #f2f2f2;
     font-weight: 600;
+    position: sticky;
+    top: 0;
 }
 
 tr:hover {
