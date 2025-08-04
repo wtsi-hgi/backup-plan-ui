@@ -52,7 +52,7 @@ func parseTemplate(name string) *template.Template {
 
 type tmplData struct {
 	Entry  *Entry
-	Errors map[formField]string
+	Errors map[string]string
 }
 
 func (s server) getEntries(w http.ResponseWriter, _ *http.Request) {
@@ -128,7 +128,7 @@ func (s server) submitEdits(w http.ResponseWriter, r *http.Request) {
 	if len(validationErrors) > 0 {
 		data := tmplData{
 			Entry:  updatedEntry,
-			Errors: validationErrors,
+			Errors: convertErrors(validationErrors),
 		}
 
 		err := tmplEditRow.Execute(w, data)
@@ -244,6 +244,14 @@ func createEntryFromForm(id uint16, r *http.Request) *Entry {
 	}
 }
 
+func convertErrors(errs map[formField]string) map[string]string {
+	result := make(map[string]string)
+	for k, v := range errs {
+		result[k.string()] = v
+	}
+	return result
+}
+
 func (s server) deleteRow(w http.ResponseWriter, r *http.Request) {
 	idStr := chi.URLParam(r, "id")
 	id, err := strconv.Atoi(idStr)
@@ -294,7 +302,7 @@ func (s server) addNewEntry(w http.ResponseWriter, r *http.Request) {
 	if len(validationErrors) > 0 {
 		data := tmplData{
 			Entry:  newEntry,
-			Errors: validationErrors,
+			Errors: convertErrors(validationErrors),
 		}
 
 		err := tmplAddRow.Execute(w, data)
