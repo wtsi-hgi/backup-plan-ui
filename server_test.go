@@ -70,22 +70,22 @@ func TestSubmitEdits(t *testing.T) {
 			name: "You can edit Reporting Root",
 			entry: func() Entry {
 				entry := *entryToEdit
-				entry.ReportingRoot = "/new/root"
-				entry.Directory = "/new/root/to/project/dir"
+				entry.ReportingRoot = "/new/root/to/project/dir"
+				entry.Directory = "/new/root/to/project/dir/nested"
 
 				return entry
 			}(),
-			newValue: "/new/root",
+			newValue: "/new/root/to/project/dir",
 		},
 		{
 			name: "You can edit Directory",
 			entry: func() Entry {
 				entry := *entryToEdit
-				entry.Directory = "/some/path/to/project/a/new/input"
+				entry.Directory = "/some/path/to/project/dir/a/new/input"
 
 				return entry
 			}(),
-			newValue: "/some/path/to/project/a/new/input",
+			newValue: "/some/path/to/project/dir/a/new/input",
 		},
 		{
 			name: "You can edit Instruction",
@@ -174,32 +174,32 @@ func TestSubmitEdits(t *testing.T) {
 func createFormFromEntry(entry Entry) url.Values {
 	form := make(url.Values)
 
-	form.Set("ReportingName", entry.ReportingName)
-	form.Set("ReportingRoot", entry.ReportingRoot)
-	form.Set("Directory", entry.Directory)
-	form.Set("Instruction", string(entry.Instruction))
-	form.Set("Match", entry.Match)
-	form.Set("Ignore", entry.Ignore)
-	form.Set("Requestor", entry.Requestor)
-	form.Set("Faculty", entry.Faculty)
+	form.Set(ReportingName.string(), entry.ReportingName)
+	form.Set(ReportingRoot.string(), entry.ReportingRoot)
+	form.Set(Directory.string(), entry.Directory)
+	form.Set(Instruction.string(), string(entry.Instruction))
+	form.Set(Match.string(), entry.Match)
+	form.Set(Ignore.string(), entry.Ignore)
+	form.Set(Requestor.string(), entry.Requestor)
+	form.Set(Faculty.string(), entry.Faculty)
 
 	return form
 }
 
 func TestValidateForm(t *testing.T) {
-	exampleFormData := map[string]string{
-		"ReportingName": "test_report",
-		"ReportingRoot": "/a/",
-		"Directory":     "/a/b/c/d/e`",
-		"Instruction":   "testInstruction",
-		"Match":         "",
-		"Ignore":        "",
-		"Requestor":     "test_user",
-		"Faculty":       "test_group",
+	exampleFormData := map[formField]string{
+		ReportingName: "test_report",
+		ReportingRoot: "/a/b/c/d/e",
+		Directory:     "/a/b/c/d/e/f",
+		Instruction:   "testInstruction",
+		Match:         "",
+		Ignore:        "",
+		Requestor:     "test_user",
+		Faculty:       "test_group",
 	}
 
 	for fieldName := range exampleFormData {
-		if fieldName == "Match" || fieldName == "Ignore" {
+		if fieldName == Match || fieldName == Ignore {
 			continue
 		}
 
@@ -218,48 +218,48 @@ func TestValidateForm(t *testing.T) {
 
 	tests := []struct {
 		name        string
-		formData    map[string]string
-		KeyForErr   string
+		formData    map[formField]string
+		KeyForErr   formField
 		expectedErr string
 	}{
 		{
 			name:        "Invalid instruction input",
-			formData:    cloneAndUpdateMapValue(exampleFormData, "Instruction", "invalid"),
-			KeyForErr:   "Instruction",
+			formData:    cloneAndUpdateMapValue(exampleFormData, Instruction, "invalid"),
+			KeyForErr:   Instruction,
 			expectedErr: ErrInvalidInstruction,
 		},
 		{
 			name: "Ignore when instruction is not backup",
-			formData: func() map[string]string {
+			formData: func() map[formField]string {
 				data := cloneMap(exampleFormData)
-				data["Instruction"] = "nobackup"
-				data["Ignore"] = "*.txt"
+				data[Instruction] = "nobackup"
+				data[Ignore] = "*.txt"
 				return data
 			}(),
-			KeyForErr:   "Ignore",
+			KeyForErr:   Ignore,
 			expectedErr: ErrIgnoreWithoutBackup,
 		},
 		{
 			name:        "Reporting root doesn't start with a slash",
-			formData:    cloneAndUpdateMapValue(exampleFormData, "ReportingRoot", "some/dir"),
-			KeyForErr:   "ReportingRoot",
+			formData:    cloneAndUpdateMapValue(exampleFormData, ReportingRoot, "some/dir"),
+			KeyForErr:   ReportingRoot,
 			expectedErr: ErrRootWithoutSlash,
 		},
 		{
-			name:        "Directory not deep enough",
-			formData:    cloneAndUpdateMapValue(exampleFormData, "Directory", "/a/shallow/dir"),
-			KeyForErr:   "Directory",
-			expectedErr: ErrDirectoryNotDeepEnough,
+			name:        "Reporting root not deep enough",
+			formData:    cloneAndUpdateMapValue(exampleFormData, ReportingRoot, "/a/shallow/dir"),
+			KeyForErr:   ReportingRoot,
+			expectedErr: ErrReportingRootNotDeepEnough,
 		},
 		{
 			name: "Directory not in Reporting root",
-			formData: func() map[string]string {
+			formData: func() map[formField]string {
 				data := cloneMap(exampleFormData)
-				data["ReportingRoot"] = "/some/parent/"
-				data["Directory"] = "/some/other/parent/nested/dir"
+				data[ReportingRoot] = "/some/root/parent/nested/dir"
+				data[Directory] = "/some/other/root/parent/nested/dir"
 				return data
 			}(),
-			KeyForErr:   "Directory",
+			KeyForErr:   Directory,
 			expectedErr: ErrDirectoryNotInRoot,
 		},
 	}
@@ -317,25 +317,25 @@ func makeFormRequest(form url.Values, endpoint string, id string) *http.Request 
 	return req
 }
 
-func createFormFromMap(data map[string]string) url.Values {
+func createFormFromMap(data map[formField]string) url.Values {
 	form := make(url.Values)
 
 	for key, value := range data {
-		form.Set(key, value)
+		form.Set(key.string(), value)
 	}
 
 	return form
 }
 
-func cloneAndUpdateMapValue(origMap map[string]string, key, value string) map[string]string {
+func cloneAndUpdateMapValue(origMap map[formField]string, key formField, value string) map[formField]string {
 	newMap := cloneMap(origMap)
 	newMap[key] = value
 
 	return newMap
 }
 
-func cloneMap(original map[string]string) map[string]string {
-	cloned := make(map[string]string)
+func cloneMap(original map[formField]string) map[formField]string {
+	cloned := make(map[formField]string)
 	for k, v := range original {
 		cloned[k] = v
 	}

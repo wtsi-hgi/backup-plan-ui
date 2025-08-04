@@ -22,14 +22,29 @@ var (
 	tmplDeleteDialog = parseTemplate("templates/delete_modal.html")
 )
 
+type formField string
+
 const (
-	ErrBlankInput             = "You cannot leave this field blank"
-	ErrInvalidInstruction     = "Input must be backup, tempBackup or noBackup"
-	ErrIgnoreWithoutBackup    = "Ignore can only be used with the backup instruction"
-	ErrDirectoryNotInRoot     = "Directory must be inside Reporting root"
-	ErrDirectoryNotDeepEnough = "Directory must be atleast five levels deep"
-	ErrRootWithoutSlash       = "Reporting Root must start with a slash (/)"
+	ErrBlankInput                 = "You cannot leave this field blank"
+	ErrInvalidInstruction         = "Input must be backup, tempBackup or noBackup"
+	ErrIgnoreWithoutBackup        = "Ignore can only be used with the backup instruction"
+	ErrDirectoryNotInRoot         = "Directory must be inside Reporting root"
+	ErrReportingRootNotDeepEnough = "Reporting Root must be atleast five levels deep"
+	ErrRootWithoutSlash           = "Reporting Root must start with a slash (/)"
+
+	ReportingName formField = "ReportingName"
+	ReportingRoot formField = "ReportingRoot"
+	Directory     formField = "Directory"
+	Instruction   formField = "Instruction"
+	Match         formField = "Match"
+	Ignore        formField = "Ignore"
+	Requestor     formField = "Requestor"
+	Faculty       formField = "Faculty"
 )
+
+func (f formField) string() string {
+	return string(f)
+}
 
 func parseTemplate(name string) *template.Template {
 	return template.Must(template.ParseFS(templateFiles, name))
@@ -37,7 +52,7 @@ func parseTemplate(name string) *template.Template {
 
 type tmplData struct {
 	Entry  *Entry
-	Errors map[string]string
+	Errors map[formField]string
 }
 
 func (s server) getEntries(w http.ResponseWriter, _ *http.Request) {
@@ -134,8 +149,8 @@ func (s server) submitEdits(w http.ResponseWriter, r *http.Request) {
 	s.resetView(w, r)
 }
 
-func validateForm(r *http.Request) map[string]string {
-	errors := make(map[string]string)
+func validateForm(r *http.Request) map[formField]string {
+	errors := make(map[formField]string)
 
 	validateNonBlankInputs(r, errors)
 	validateInstructionAndIgnore(r, errors)
@@ -144,76 +159,76 @@ func validateForm(r *http.Request) map[string]string {
 	return errors
 }
 
-func validateNonBlankInputs(r *http.Request, errors map[string]string) {
-	requiredFields := []string{"ReportingName", "ReportingRoot", "Directory",
-		"Instruction", "Requestor", "Faculty"}
+func validateNonBlankInputs(r *http.Request, errors map[formField]string) {
+	requiredFields := []formField{ReportingName, ReportingRoot, Directory,
+		Instruction, Requestor, Faculty}
 
 	for _, requiredField := range requiredFields {
-		if r.FormValue(requiredField) == "" {
+		if r.FormValue(requiredField.string()) == "" {
 			errors[requiredField] = ErrBlankInput
 		}
 	}
 }
 
-func validateInstructionAndIgnore(r *http.Request, errors map[string]string) {
-	instr := instruction(r.FormValue("Instruction"))
-	ignore := r.FormValue("Ignore")
+func validateInstructionAndIgnore(r *http.Request, errors map[formField]string) {
+	instr := instruction(r.FormValue(Instruction.string()))
+	ignore := r.FormValue(Ignore.string())
 
 	if instr != Backup && instr != TempBackup && instr != NoBackup {
-		addToMapIfNew(errors, "Instruction", ErrInvalidInstruction)
+		addToMapIfNew(errors, Instruction, ErrInvalidInstruction)
 	}
 
 	if ignore != "" && instr != Backup {
-		addToMapIfNew(errors, "Ignore", ErrIgnoreWithoutBackup)
+		addToMapIfNew(errors, Ignore, ErrIgnoreWithoutBackup)
 	}
 }
 
-func addToMapIfNew(givenMap map[string]string, key, value string) {
+func addToMapIfNew(givenMap map[formField]string, key formField, value string) {
 	if _, exists := givenMap[key]; !exists {
 		givenMap[key] = value
 	}
 }
 
-func validateDirectoryAndRoot(r *http.Request, errors map[string]string) {
-	reportingRoot := r.FormValue("ReportingRoot")
-	dir := r.FormValue("Directory")
+func validateDirectoryAndRoot(r *http.Request, errors map[formField]string) {
+	reportingRoot := r.FormValue(ReportingRoot.string())
+	dir := r.FormValue(Directory.string())
 
 	if !strings.HasSuffix(dir, "/") {
 		dir += "/"
 	}
 
 	if !strings.HasPrefix(reportingRoot, "/") {
-		addToMapIfNew(errors, "ReportingRoot", ErrRootWithoutSlash)
+		addToMapIfNew(errors, ReportingRoot, ErrRootWithoutSlash)
 	}
 
 	rel, err := filepath.Rel(reportingRoot, dir)
 	if err != nil || strings.HasPrefix(rel, "../") || rel == ".." {
-		addToMapIfNew(errors, "Directory", ErrDirectoryNotInRoot)
+		addToMapIfNew(errors, Directory, ErrDirectoryNotInRoot)
 	}
 
 	depth := 0
-	for _, part := range strings.Split(dir, string(filepath.Separator)) {
+	for _, part := range strings.Split(reportingRoot, string(filepath.Separator)) {
 		if part != "" {
 			depth++
 		}
 	}
 
 	if depth < 5 {
-		addToMapIfNew(errors, "Directory", ErrDirectoryNotDeepEnough)
+		addToMapIfNew(errors, ReportingRoot, ErrReportingRootNotDeepEnough)
 	}
 }
 
 func createEntryFromForm(id uint16, r *http.Request) *Entry {
 	return &Entry{
 		ID:            id,
-		ReportingName: r.FormValue("ReportingName"),
-		ReportingRoot: r.FormValue("ReportingRoot"),
-		Directory:     r.FormValue("Directory"),
-		Instruction:   instruction(r.FormValue("Instruction")),
-		Match:         r.FormValue("Match"),
-		Ignore:        r.FormValue("Ignore"),
-		Requestor:     r.FormValue("Requestor"),
-		Faculty:       r.FormValue("Faculty"),
+		ReportingName: r.FormValue(ReportingName.string()),
+		ReportingRoot: r.FormValue(ReportingRoot.string()),
+		Directory:     r.FormValue(Directory.string()),
+		Instruction:   instruction(r.FormValue(Instruction.string())),
+		Match:         r.FormValue(Match.string()),
+		Ignore:        r.FormValue(Ignore.string()),
+		Requestor:     r.FormValue(Requestor.string()),
+		Faculty:       r.FormValue(Faculty.string()),
 	}
 }
 
