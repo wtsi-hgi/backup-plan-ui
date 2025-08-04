@@ -19,24 +19,49 @@
         hx-target="#add-row-container" 
         hx-swap="innerHTML">
         <td>
-            <input autofocus name='ReportingName' value="">
+          <div class="field-wrapper">
+            <input autofocus name='ReportingName' value="{{.Entry.ReportingName}}" 
+              class="{{if index .Errors "ReportingName"}}input-error{{end}}">
+            <div class="error-message">
+              {{with index .Errors "ReportingName"}}{{.}}{{end}}
+            </div>
+          </div>
         </td>
         <td>
-            <input name='ReportingRoot' value="">
+          <div class="field-wrapper">
+            <input name='ReportingRoot' value="{{.Entry.ReportingRoot}}"
+              class="{{if index .Errors "ReportingRoot"}}input-error{{end}}">
+            <div class="error-message">
+              {{with index .Errors "ReportingRoot"}}{{.}}{{end}}
+            </div>
+          </div>
         </td>
         <td>
-            <input name='Directory' value="">
+          <div class="field-wrapper">
+            <input name='Directory' value="{{.Entry.Directory}}"
+            class="{{if index .Errors "Directory"}}input-error{{end}}">
+            <div class="error-message">
+              {{with index .Errors "Directory"}}{{.}}{{end}}
+            </div>
+          </div>
         </td>
         <td>
-            <select name="Instruction">
-                <option value="backup" {{if eq .Instruction "backup"}}selected{{end}}>backup</option>
-                <option value="nobackup" {{if eq .Instruction "nobackup"}}selected{{end}}>nobackup</option>
-                <option value="tempbackup" {{if eq .Instruction "tempbackup"}}selected{{end}}>tempbackup</option>
+          <div class="field-wrapper">
+            <select name="Instruction"
+            class="{{if index .Errors "Instruction"}}input-error{{end}}">
+                <option value="backup" {{if eq .Entry.Instruction "backup"}}selected{{end}}>backup</option>
+                <option value="nobackup" {{if eq .Entry.Instruction "nobackup"}}selected{{end}}>nobackup</option>
+                <option value="tempbackup" {{if eq .Entry.Instruction "tempbackup"}}selected{{end}}>tempbackup</option>
             </select>
+            <div class="error-message">
+              {{with index .Errors "Match"}}{{.}}{{end}}
+            </div>
+          </div>
         </td>
         <td>
-            <div x-data="tagInputComponent('{{.Match}}'.split(' ').map(t => t.trim()).filter(Boolean), 'Match')">
-                <div class="tag-container">
+          <div class="field-wrapper">  
+            <div x-data="tagInputComponent('{{.Entry.Match}}'.split(' ').map(t => t.trim()).filter(Boolean), 'Match')">
+              <div class="tag-container {{if index .Errors "Match"}}input-error{{end}}">
                   <template x-for="(tag, i) in tags" :key="i">
                     <div class="tag">
                       <span x-text="tag"></span>
@@ -54,10 +79,15 @@
                 </div>
                 <input type="hidden" :name="name" :value="tags.join(' ')">
             </div>
+            <div class="error-message">
+              {{with index .Errors "Match"}}{{.}}{{end}}
+            </div>
+          </div>
         </td>
-        <td>   
-            <div x-data="tagInputComponent('{{.Ignore}}'.split(' ').map(t => t.trim()).filter(Boolean), 'Ignore')">
-                <div class="tag-container">
+        <td>
+          <div class="field-wrapper">   
+            <div x-data="tagInputComponent('{{.Entry.Ignore}}'.split(' ').map(t => t.trim()).filter(Boolean), 'Ignore')">
+                <div class="tag-container {{if index .Errors "Ignore"}}input-error{{end}}">
                   <template x-for="(tag, i) in tags" :key="i">
                     <div class="tag">
                       <span x-text="tag"></span>
@@ -75,12 +105,28 @@
                 </div>
                 <input type="hidden" :name="name" :value="tags.join(' ')">
             </div>
+            <div class="error-message">
+              {{with index .Errors "Ignore"}}{{.}}{{end}}
+            </div>
+          </div>
         </td>
         <td>
-            <input name='Requestor' value="">
+          <div class="field-wrapper">  
+            <input name='Requestor' value="{{.Entry.Requestor}}"
+            class="{{if index .Errors "Requestor"}}input-error{{end}}">
+            <div class="error-message">
+              {{with index .Errors "Requestor"}}{{.}}{{end}}
+            </div>
+          </div>
         </td>
         <td>
-            <input name='Faculty' value="">
+          <div class="field-wrapper">  
+            <input name='Faculty' value="{{.Entry.Faculty}}"
+            class="{{if index .Errors "Faculty"}}input-error{{end}}">
+            <div class="error-message">
+              {{with index .Errors "Faculty"}}{{.}}{{end}}
+            </div>
+          </div>
         </td>
         <td>
             <button class="btn primary" 

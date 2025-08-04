@@ -1,21 +1,21 @@
-<tr data-id="{{.ID}}">
-    <td>{{.ReportingName}}</td>
-    <td>{{.ReportingRoot}}</td>
-    <td>{{.Directory}}</td>
-    <td>{{.Instruction}}</td>
-    <td>{{.Match}}</td>
-    <td>{{.Ignore}}</td>
-    <td>{{.Requestor}}</td>
-    <td>{{.Faculty}}</td>
+<tr data-id="{{.Entry.ID}}">
+    <td>{{.Entry.ReportingName}}</td>
+    <td>{{.Entry.ReportingRoot}}</td>
+    <td>{{.Entry.Directory}}</td>
+    <td>{{.Entry.Instruction}}</td>
+    <td>{{.Entry.Match}}</td>
+    <td>{{.Entry.Ignore}}</td>
+    <td>{{.Entry.Requestor}}</td>
+    <td>{{.Entry.Faculty}}</td>
     <td>
       <button class="btn"
-            hx-get="actions/edit/{{.ID}}"
+            hx-get="actions/edit/{{.Entry.ID}}"
             hx-target="closest tr" 
             hx-swap="outerHTML">
         Edit
       </button>
       <button class="btn danger" 
-        hx-get="actions/startDelete/{{.ID}}"
+        hx-get="actions/startDelete/{{.Entry.ID}}"
         hx-target="body" 
         hx-swap="beforeend">
         Delete

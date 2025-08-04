@@ -4,7 +4,9 @@ import (
 	"fmt"
 	"html/template"
 	"net/http"
+	"path/filepath"
 	"strconv"
+	"strings"
 
 	"github.com/go-chi/chi/v5"
 )
@@ -20,8 +22,37 @@ var (
 	tmplDeleteDialog = parseTemplate("templates/delete_modal.html")
 )
 
+type formField string
+
+const (
+	ErrBlankInput                 = "You cannot leave this field blank"
+	ErrInvalidInstruction         = "Input must be backup, tempBackup or noBackup"
+	ErrIgnoreWithoutBackup        = "Ignore can only be used with the backup instruction"
+	ErrDirectoryNotInRoot         = "Directory must be inside Reporting root"
+	ErrReportingRootNotDeepEnough = "Reporting Root must be atleast five levels deep"
+	ErrRootWithoutSlash           = "Reporting Root must start with a slash (/)"
+
+	ReportingName formField = "ReportingName"
+	ReportingRoot formField = "ReportingRoot"
+	Directory     formField = "Directory"
+	Instruction   formField = "Instruction"
+	Match         formField = "Match"
+	Ignore        formField = "Ignore"
+	Requestor     formField = "Requestor"
+	Faculty       formField = "Faculty"
+)
+
+func (f formField) string() string {
+	return string(f)
+}
+
 func parseTemplate(name string) *template.Template {
 	return template.Must(template.ParseFS(templateFiles, name))
+}
+
+type tmplData struct {
+	Entry  *Entry
+	Errors map[string]string
 }
 
 func (s server) getEntries(w http.ResponseWriter, _ *http.Request) {
@@ -33,7 +64,7 @@ func (s server) getEntries(w http.ResponseWriter, _ *http.Request) {
 	}
 
 	for _, entry := range entries {
-		err = tmplRow.Execute(w, entry)
+		err = tmplRow.Execute(w, tmplData{Entry: entry})
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 		}
@@ -59,7 +90,7 @@ func (s server) changeTemplate(w http.ResponseWriter, r *http.Request, tmpl *tem
 		return err
 	}
 
-	return tmpl.Execute(w, entry)
+	return tmpl.Execute(w, tmplData{Entry: entry})
 }
 
 func (s server) resetView(w http.ResponseWriter, r *http.Request) {
@@ -68,6 +99,7 @@ func (s server) resetView(w http.ResponseWriter, r *http.Request) {
 	if idStr == "new" {
 		return
 	}
+
 	err := s.changeTemplate(w, r, tmplRow)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -90,7 +122,22 @@ func (s server) submitEdits(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	validationErrors := validateForm(r)
 	updatedEntry := createEntryFromForm(uint16(id), r)
+
+	if len(validationErrors) > 0 {
+		data := tmplData{
+			Entry:  updatedEntry,
+			Errors: convertErrors(validationErrors),
+		}
+
+		err := tmplEditRow.Execute(w, data)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+		}
+
+		return
+	}
 
 	err = s.db.updateEntry(updatedEntry)
 	if err != nil {
@@ -102,18 +149,109 @@ func (s server) submitEdits(w http.ResponseWriter, r *http.Request) {
 	s.resetView(w, r)
 }
 
+type FormValidator struct {
+	request *http.Request
+	errors  map[formField]string
+}
+
+func validateForm(r *http.Request) map[formField]string {
+	fv := FormValidator{
+		request: r,
+		errors:  make(map[formField]string),
+	}
+
+	fv.validateNonBlankInputs()
+	fv.validateInstructionAndIgnore()
+	fv.validateDirectoryAndRoot()
+
+	return fv.errors
+}
+
+func (fv FormValidator) validateNonBlankInputs() {
+	requiredFields := []formField{ReportingName, ReportingRoot, Directory,
+		Instruction, Requestor, Faculty}
+
+	for _, requiredField := range requiredFields {
+		if fv.getFormValue(requiredField) == "" {
+			fv.errors[requiredField] = ErrBlankInput
+		}
+	}
+}
+
+func (fv FormValidator) getFormValue(field formField) string {
+	return fv.request.FormValue(field.string())
+}
+
+func (fv FormValidator) validateInstructionAndIgnore() {
+	instr := instruction(fv.getFormValue(Instruction))
+	ignore := fv.getFormValue(Ignore)
+
+	if instr != Backup && instr != TempBackup && instr != NoBackup {
+		fv.addErrorIfNew(Instruction, ErrInvalidInstruction)
+	}
+
+	if ignore != "" && instr != Backup {
+		fv.addErrorIfNew(Ignore, ErrIgnoreWithoutBackup)
+	}
+}
+
+func (fv FormValidator) addErrorIfNew(field formField, err string) {
+	if _, exists := fv.errors[field]; !exists {
+		fv.errors[field] = err
+	}
+}
+
+func (fv FormValidator) validateDirectoryAndRoot() {
+	reportingRoot := fv.getFormValue(ReportingRoot)
+	dir := fv.getFormValue(Directory)
+
+	if !strings.HasSuffix(dir, "/") {
+		dir += "/"
+	}
+
+	if !strings.HasPrefix(reportingRoot, "/") {
+		fv.addErrorIfNew(ReportingRoot, ErrRootWithoutSlash)
+	}
+
+	rel, err := filepath.Rel(reportingRoot, dir)
+	if err != nil || strings.HasPrefix(rel, "../") || rel == ".." {
+		fv.addErrorIfNew(Directory, ErrDirectoryNotInRoot)
+	}
+
+	depth := 0
+	for _, part := range strings.Split(reportingRoot, string(filepath.Separator)) {
+		if part != "" {
+			depth++
+		}
+	}
+
+	if depth < 5 {
+		fv.addErrorIfNew(ReportingRoot, ErrReportingRootNotDeepEnough)
+	}
+}
+
 func createEntryFromForm(id uint16, r *http.Request) *Entry {
 	return &Entry{
 		ID:            id,
-		ReportingName: r.FormValue("ReportingName"),
-		ReportingRoot: r.FormValue("ReportingRoot"),
-		Directory:     r.FormValue("Directory"),
-		Instruction:   instruction(r.FormValue("Instruction")),
-		Match:         r.FormValue("Match"),
-		Ignore:        r.FormValue("Ignore"),
-		Requestor:     r.FormValue("Requestor"),
-		Faculty:       r.FormValue("Faculty"),
+		ReportingName: r.FormValue(ReportingName.string()),
+		ReportingRoot: r.FormValue(ReportingRoot.string()),
+		Directory:     r.FormValue(Directory.string()),
+		Instruction:   instruction(r.FormValue(Instruction.string())),
+		Match:         r.FormValue(Match.string()),
+		Ignore:        r.FormValue(Ignore.string()),
+		Requestor:     r.FormValue(Requestor.string()),
+		Faculty:       r.FormValue(Faculty.string()),
 	}
+}
+
+func convertErrors(errs map[formField]string) map[string]string {
+	result := make(map[string]string, len(errs))
+
+	for k, v := range errs {
+		result[k.string()] = v
+	}
+
+	return result
 }
 
 func (s server) deleteRow(w http.ResponseWriter, r *http.Request) {
@@ -144,7 +282,7 @@ func (s server) deleteRow(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s server) showAddRowForm(w http.ResponseWriter, _ *http.Request) {
-	err := tmplAddRow.Execute(w, nil)
+	err := tmplAddRow.Execute(w, tmplData{Entry: &Entry{}})
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
@@ -158,8 +296,23 @@ func (s server) addNewEntry(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	validationErrors := validateForm(r)
+
 	var dummyEntryID uint16 // will be set later
 	newEntry := createEntryFromForm(dummyEntryID, r)
+
+	if len(validationErrors) > 0 {
+		data := tmplData{
+			Entry:  newEntry,
+			Errors: convertErrors(validationErrors),
+		}
+
+		err := tmplAddRow.Execute(w, data)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+		}
+		return
+	}
 
 	err = s.db.addEntry(newEntry)
 	if err != nil {
