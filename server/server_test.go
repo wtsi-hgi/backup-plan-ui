@@ -1,8 +1,10 @@
-package main
+package server
 
 import (
+	"backup-plan-ui/sources"
 	"context"
 	"fmt"
+	"html/template"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -15,12 +17,12 @@ import (
 )
 
 func TestShowAddRowForm(t *testing.T) {
-	s := server{}
+	s, _ := createServer(t)
 
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest(http.MethodGet, "/actions/add", nil)
 
-	s.showAddRowForm(w, r)
+	s.ShowAddRowForm(w, r)
 
 	body := getBodyAndCheckStatusOK(t, w)
 
@@ -35,7 +37,7 @@ func TestGetEntries(t *testing.T) {
 	req := httptest.NewRequest(http.MethodGet, "/entries", nil)
 	w := httptest.NewRecorder()
 
-	s.getEntries(w, req)
+	s.GetEntries(w, req)
 
 	body := getBodyAndCheckStatusOK(t, w)
 
@@ -53,12 +55,12 @@ func TestSubmitEdits(t *testing.T) {
 
 	tests := []struct {
 		name     string
-		entry    Entry
+		entry    sources.Entry
 		newValue string
 	}{
 		{
 			name: "You can edit Reporting Name",
-			entry: func() Entry {
+			entry: func() sources.Entry {
 				entry := *entryToEdit
 				entry.ReportingName = "NewName"
 
@@ -68,7 +70,7 @@ func TestSubmitEdits(t *testing.T) {
 		},
 		{
 			name: "You can edit Reporting Root",
-			entry: func() Entry {
+			entry: func() sources.Entry {
 				entry := *entryToEdit
 				entry.ReportingRoot = "/new/root/to/project/dir"
 				entry.Directory = "/new/root/to/project/dir/nested"
@@ -79,7 +81,7 @@ func TestSubmitEdits(t *testing.T) {
 		},
 		{
 			name: "You can edit Directory",
-			entry: func() Entry {
+			entry: func() sources.Entry {
 				entry := *entryToEdit
 				entry.Directory = "/some/path/to/project/dir/a/new/input"
 
@@ -89,17 +91,17 @@ func TestSubmitEdits(t *testing.T) {
 		},
 		{
 			name: "You can edit Instruction",
-			entry: func() Entry {
+			entry: func() sources.Entry {
 				entry := *entryToEdit
-				entry.Instruction = NoBackup
+				entry.Instruction = sources.NoBackup
 
 				return entry
 			}(),
-			newValue: string(NoBackup),
+			newValue: string(sources.NoBackup),
 		},
 		{
 			name: "You can edit Match",
-			entry: func() Entry {
+			entry: func() sources.Entry {
 				entry := *entryToEdit
 				entry.Match = "*.csv *.txt"
 
@@ -109,9 +111,9 @@ func TestSubmitEdits(t *testing.T) {
 		},
 		{
 			name: "You can edit Ignore",
-			entry: func() Entry {
+			entry: func() sources.Entry {
 				entry := *entryToEdit
-				entry.Instruction = Backup
+				entry.Instruction = sources.Backup
 				entry.Ignore = "*.txt"
 
 				return entry
@@ -120,7 +122,7 @@ func TestSubmitEdits(t *testing.T) {
 		},
 		{
 			name: "You can edit Requestor",
-			entry: func() Entry {
+			entry: func() sources.Entry {
 				entry := *entryToEdit
 				entry.Requestor = "NewRequestor"
 
@@ -130,7 +132,7 @@ func TestSubmitEdits(t *testing.T) {
 		},
 		{
 			name: "You can edit Faculty",
-			entry: func() Entry {
+			entry: func() sources.Entry {
 				entry := *entryToEdit
 				entry.Faculty = "NewFaculty"
 
@@ -147,7 +149,7 @@ func TestSubmitEdits(t *testing.T) {
 
 			w := httptest.NewRecorder()
 
-			s.submitEdits(w, req)
+			s.SubmitEdits(w, req)
 
 			body := getBodyAndCheckStatusOK(t, w)
 
@@ -155,7 +157,7 @@ func TestSubmitEdits(t *testing.T) {
 				t.Error(err)
 			}
 
-			changedEntry, err := s.db.getEntry(test.entry.ID)
+			changedEntry, err := s.DB.GetEntry(test.entry.ID)
 			if err != nil {
 				t.Error(err)
 			}
@@ -171,7 +173,7 @@ func TestSubmitEdits(t *testing.T) {
 	}
 }
 
-func createFormFromEntry(entry Entry) url.Values {
+func createFormFromEntry(entry sources.Entry) url.Values {
 	form := make(url.Values)
 
 	form.Set(ReportingName.string(), entry.ReportingName)
@@ -276,13 +278,14 @@ func TestValidateForm(t *testing.T) {
 	}
 }
 
-func createServer(t *testing.T) (server, []*Entry) {
+func createServer(t *testing.T) (Server, []*sources.Entry) {
 	t.Helper()
 
-	entries, dbPath := createTestData(t)
+	entries, dbPath := sources.CreateTestData(t)
 
-	server := server{
-		db: CSVSource{dbPath},
+	server := Server{
+		DB:        sources.CSVSource{Path: dbPath},
+		templates: template.Must(template.ParseGlob("../templates/*.html")),
 	}
 
 	return server, entries

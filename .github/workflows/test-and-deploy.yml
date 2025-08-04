@@ -28,7 +28,7 @@ jobs:
       run: go mod download
         
     - name: Run tests
-      run: go test -v ./...
+      run: go test -tags test -v ./...
 
   deploy:
     name: Build and Deploy

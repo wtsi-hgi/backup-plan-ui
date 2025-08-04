@@ -1,4 +1,4 @@
-package main
+package sources
 
 import (
 	"errors"
@@ -8,21 +8,41 @@ import (
 )
 
 type DataSource interface {
-	readAll() ([]*Entry, error)
-	getEntry(id uint16) (*Entry, error)
-	updateEntry(newEntry *Entry) error
-	deleteEntry(id uint16) error
-	addEntry(entry *Entry) error
+	ReadAll() ([]*Entry, error)
+	GetEntry(id uint16) (*Entry, error)
+	UpdateEntry(newEntry *Entry) error
+	DeleteEntry(id uint16) error
+	AddEntry(entry *Entry) error
 }
 
 type CSVSource struct {
-	path string
+	Path string
+}
+
+type Instruction string
+
+const (
+	Backup     Instruction = "backup"
+	NoBackup   Instruction = "nobackup"
+	TempBackup Instruction = "tempbackup"
+)
+
+type Entry struct {
+	ReportingName string      `csv:"reporting_name"`
+	ReportingRoot string      `csv:"reporting_root"`
+	Directory     string      `csv:"directory"`
+	Instruction   Instruction `csv:"instruction"`
+	Match         string      `csv:"match"`
+	Ignore        string      `csv:"ignore"`
+	Requestor     string      `csv:"requestor"`
+	Faculty       string      `csv:"faculty"`
+	ID            uint16      `csv:"id"`
 }
 
 var ErrNoEntry = errors.New("entry does not exist")
 
-func (c CSVSource) readAll() ([]*Entry, error) {
-	in, err := os.Open(c.path)
+func (c CSVSource) ReadAll() ([]*Entry, error) {
+	in, err := os.Open(c.Path)
 	if err != nil {
 		return nil, err
 	}
@@ -36,8 +56,8 @@ func (c CSVSource) readAll() ([]*Entry, error) {
 	return entries, err
 }
 
-func (c CSVSource) getEntry(id uint16) (*Entry, error) {
-	entries, err := c.readAll()
+func (c CSVSource) GetEntry(id uint16) (*Entry, error) {
+	entries, err := c.ReadAll()
 	if err != nil {
 		return nil, err
 	}
@@ -57,8 +77,8 @@ func getMatchingEntryWithID(id uint16, entries []*Entry) (*Entry, int, error) {
 	return nil, 0, ErrNoEntry
 }
 
-func (c CSVSource) updateEntry(newEntry *Entry) error {
-	entries, err := c.readAll()
+func (c CSVSource) UpdateEntry(newEntry *Entry) error {
+	entries, err := c.ReadAll()
 	if err != nil {
 		return err
 	}
@@ -74,7 +94,7 @@ func (c CSVSource) updateEntry(newEntry *Entry) error {
 }
 
 func (c CSVSource) writeEntries(entries []*Entry) error {
-	out, err := os.Create(c.path)
+	out, err := os.Create(c.Path)
 	if err != nil {
 		return err
 	}
@@ -84,8 +104,8 @@ func (c CSVSource) writeEntries(entries []*Entry) error {
 	return gocsv.MarshalFile(&entries, out)
 }
 
-func (c CSVSource) deleteEntry(id uint16) error {
-	entries, err := c.readAll()
+func (c CSVSource) DeleteEntry(id uint16) error {
+	entries, err := c.ReadAll()
 	if err != nil {
 		return err
 	}
@@ -100,8 +120,8 @@ func (c CSVSource) deleteEntry(id uint16) error {
 	return c.writeEntries(entries)
 }
 
-func (c CSVSource) addEntry(newEntry *Entry) error {
-	entries, err := c.readAll()
+func (c CSVSource) AddEntry(newEntry *Entry) error {
+	entries, err := c.ReadAll()
 	if err != nil {
 		return err
 	}
