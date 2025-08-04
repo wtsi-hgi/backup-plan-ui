@@ -149,61 +149,73 @@ func (s server) submitEdits(w http.ResponseWriter, r *http.Request) {
 	s.resetView(w, r)
 }
 
-func validateForm(r *http.Request) map[formField]string {
-	errors := make(map[formField]string)
-
-	validateNonBlankInputs(r, errors)
-	validateInstructionAndIgnore(r, errors)
-	validateDirectoryAndRoot(r, errors)
-
-	return errors
+type FormValidator struct {
+	request *http.Request
+	errors  map[formField]string
 }
 
-func validateNonBlankInputs(r *http.Request, errors map[formField]string) {
+func validateForm(r *http.Request) map[formField]string {
+	fv := FormValidator{
+		request: r,
+		errors:  make(map[formField]string),
+	}
+
+	fv.validateNonBlankInputs()
+	fv.validateInstructionAndIgnore()
+	fv.validateDirectoryAndRoot()
+
+	return fv.errors
+}
+
+func (fv FormValidator) validateNonBlankInputs() {
 	requiredFields := []formField{ReportingName, ReportingRoot, Directory,
 		Instruction, Requestor, Faculty}
 
 	for _, requiredField := range requiredFields {
-		if r.FormValue(requiredField.string()) == "" {
-			errors[requiredField] = ErrBlankInput
+		if fv.getFormValue(requiredField) == "" {
+			fv.errors[requiredField] = ErrBlankInput
 		}
 	}
 }
 
-func validateInstructionAndIgnore(r *http.Request, errors map[formField]string) {
-	instr := instruction(r.FormValue(Instruction.string()))
-	ignore := r.FormValue(Ignore.string())
+func (fv FormValidator) getFormValue(field formField) string {
+	return fv.request.FormValue(field.string())
+}
+
+func (fv FormValidator) validateInstructionAndIgnore() {
+	instr := instruction(fv.getFormValue(Instruction))
+	ignore := fv.getFormValue(Ignore)
 
 	if instr != Backup && instr != TempBackup && instr != NoBackup {
-		addToMapIfNew(errors, Instruction, ErrInvalidInstruction)
+		fv.addErrorIfNew(Instruction, ErrInvalidInstruction)
 	}
 
 	if ignore != "" && instr != Backup {
-		addToMapIfNew(errors, Ignore, ErrIgnoreWithoutBackup)
+		fv.addErrorIfNew(Ignore, ErrIgnoreWithoutBackup)
 	}
 }
 
-func addToMapIfNew(givenMap map[formField]string, key formField, value string) {
-	if _, exists := givenMap[key]; !exists {
-		givenMap[key] = value
+func (fv FormValidator) addErrorIfNew(field formField, err string) {
+	if _, exists := fv.errors[field]; !exists {
+		fv.errors[field] = err
 	}
 }
 
-func validateDirectoryAndRoot(r *http.Request, errors map[formField]string) {
-	reportingRoot := r.FormValue(ReportingRoot.string())
-	dir := r.FormValue(Directory.string())
+func (fv FormValidator) validateDirectoryAndRoot() {
+	reportingRoot := fv.getFormValue(ReportingRoot)
+	dir := fv.getFormValue(Directory)
 
 	if !strings.HasSuffix(dir, "/") {
 		dir += "/"
 	}
 
 	if !strings.HasPrefix(reportingRoot, "/") {
-		addToMapIfNew(errors, ReportingRoot, ErrRootWithoutSlash)
+		fv.addErrorIfNew(ReportingRoot, ErrRootWithoutSlash)
 	}
 
 	rel, err := filepath.Rel(reportingRoot, dir)
 	if err != nil || strings.HasPrefix(rel, "../") || rel == ".." {
-		addToMapIfNew(errors, Directory, ErrDirectoryNotInRoot)
+		fv.addErrorIfNew(Directory, ErrDirectoryNotInRoot)
 	}
 
 	depth := 0
@@ -214,7 +226,7 @@ func validateDirectoryAndRoot(r *http.Request, errors map[formField]string) {
 	}
 
 	if depth < 5 {
-		addToMapIfNew(errors, ReportingRoot, ErrReportingRootNotDeepEnough)
+		fv.addErrorIfNew(ReportingRoot, ErrReportingRootNotDeepEnough)
 	}
 }
 
