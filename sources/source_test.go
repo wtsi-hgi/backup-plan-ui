@@ -1,4 +1,4 @@
-package main
+package sources
 
 import (
 	"fmt"
@@ -10,14 +10,12 @@ import (
 	"github.com/gocarina/gocsv"
 )
 
-const numTestDataRows = 3
-
 func TestReadAll(t *testing.T) {
 	originalEntries, testPath := createTestData(t)
 
-	csvSource := CSVSource{path: testPath}
+	csvSource := CSVSource{Path: testPath}
 
-	entries, err := csvSource.readAll()
+	entries, err := csvSource.ReadAll()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -38,17 +36,17 @@ func TestReadAll(t *testing.T) {
 func TestUpdateEntry(t *testing.T) {
 	originalEntries, testPath := createTestData(t)
 
-	csvSource := CSVSource{path: testPath}
+	csvSource := CSVSource{Path: testPath}
 
 	newEntry := originalEntries[0]
 	newEntry.ReportingName = "test_project_updated"
 
-	err := csvSource.updateEntry(newEntry)
+	err := csvSource.UpdateEntry(newEntry)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	entries, err := csvSource.readAll()
+	entries, err := csvSource.ReadAll()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -65,7 +63,7 @@ func TestUpdateEntry(t *testing.T) {
 }
 
 func TestDeleteEntry(t *testing.T) {
-	rowsToTest := []uint16{0, max(0, numTestDataRows-2), numTestDataRows - 1}
+	rowsToTest := []uint16{0, max(0, NumTestDataRows-2), NumTestDataRows - 1}
 
 	for _, id := range rowsToTest {
 		idToDelete := uint16(id)
@@ -73,14 +71,14 @@ func TestDeleteEntry(t *testing.T) {
 		t.Run(fmt.Sprintf("Entry %d", idToDelete), func(t *testing.T) {
 			entriesBefore, testPath := createTestData(t)
 
-			csvSource := CSVSource{path: testPath}
+			csvSource := CSVSource{Path: testPath}
 
-			err := csvSource.deleteEntry(idToDelete)
+			err := csvSource.DeleteEntry(idToDelete)
 			if err != nil {
 				t.Fatal(err)
 			}
 
-			entriesAfter, err := csvSource.readAll()
+			entriesAfter, err := csvSource.ReadAll()
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -111,9 +109,9 @@ func createTestData(t *testing.T) ([]*Entry, string) {
 		Faculty:       "group",
 	}
 
-	entries := make([]*Entry, numTestDataRows)
+	entries := make([]*Entry, NumTestDataRows)
 
-	for i := range numTestDataRows {
+	for i := range NumTestDataRows {
 		newEntry := baseEntry
 		newEntry.ReportingName = fmt.Sprintf("test_project_%d", i)
 		newEntry.ID = uint16(i)
@@ -140,19 +138,19 @@ func TestWriteEntries(t *testing.T) {
 	entries, _ := createTestData(t)
 
 	filePath := filepath.Join(t.TempDir(), "test.csv")
-	csvSource := CSVSource{path: filePath}
+	csvSource := CSVSource{Path: filePath}
 
 	err := csvSource.writeEntries(entries)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	newEntries, err := csvSource.readAll()
+	newEntries, err := csvSource.ReadAll()
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	if len(newEntries) != numTestDataRows {
+	if len(newEntries) != NumTestDataRows {
 		t.Fatal("Number of read entries is incorrect")
 	}
 
@@ -163,27 +161,27 @@ func TestWriteEntries(t *testing.T) {
 
 func TestAddEntry(t *testing.T) {
 	entries, filePath := createTestData(t)
-	csvSource := CSVSource{path: filePath}
+	csvSource := CSVSource{Path: filePath}
 
 	newEntry := entries[0]
 	newEntry.ReportingName = "test_project_new"
 
-	err := csvSource.addEntry(newEntry)
+	err := csvSource.AddEntry(newEntry)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	entries, err = csvSource.readAll()
+	entries, err = csvSource.ReadAll()
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	if len(entries) != numTestDataRows+1 {
+	if len(entries) != NumTestDataRows+1 {
 		t.Fatal("Number of read entries is incorrect")
 	}
 
-	if !reflect.DeepEqual(entries[numTestDataRows], newEntry) {
-		t.Errorf("New entry does not match expected values.\nGot %+v, expected %+v", entries[numTestDataRows], newEntry)
+	if !reflect.DeepEqual(entries[NumTestDataRows], newEntry) {
+		t.Errorf("New entry does not match expected values.\nGot %+v, expected %+v", entries[NumTestDataRows], newEntry)
 	}
 }
 

@@ -1,0 +1,2 @@
+[settings]
+build.tags = ["test"]
