@@ -28,7 +28,11 @@ func main() {
 
 	log.SetFlags(0) // timestamp comes from systemd
 
-	dbPath := os.Args[1]
+	dbPath, err := filepath.Abs(os.Args[1])
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	slog.Info("Using database: " + dbPath)
 
 	srv, err := server.NewServer(sources.CSVSource{Path: dbPath}, templateFiles)

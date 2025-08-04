@@ -154,7 +154,7 @@ func (s Server) SubmitEdits(w http.ResponseWriter, r *http.Request) {
 
 	err = s.db.UpdateEntry(updatedEntry)
 	if err != nil {
-		s.abortWithError(w, err, http.StatusBadRequest)
+		s.abortWithError(w, err, http.StatusInternalServerError)
 
 		return
 	}
@@ -199,7 +199,7 @@ func (s Server) DeleteRow(w http.ResponseWriter, r *http.Request) {
 
 	err = s.db.DeleteEntry(uint16(id))
 	if err != nil {
-		s.abortWithError(w, err, http.StatusBadRequest)
+		s.abortWithError(w, err, http.StatusInternalServerError)
 	}
 
 	slog.Info(fmt.Sprintf("Deleted entry with id %d\n", id))
