@@ -5,6 +5,7 @@ import (
 	"embed"
 	"fmt"
 	"html/template"
+	"log/slog"
 	"net/http"
 	"path/filepath"
 	"strconv"
@@ -58,14 +59,19 @@ type tmplData struct {
 
 func (s Server) ServeHome(w http.ResponseWriter, _ *http.Request) {
 	if err := s.templates.ExecuteTemplate(w, tmplIndexPath, nil); err != nil {
-		http.Error(w, "Template rendering failed", http.StatusInternalServerError)
+		s.abortWithError(w, err, http.StatusInternalServerError)
 	}
+}
+
+func (s Server) abortWithError(w http.ResponseWriter, err error, statusCode int) {
+	slog.Error(err.Error())
+	http.Error(w, err.Error(), statusCode)
 }
 
 func (s Server) GetEntries(w http.ResponseWriter, _ *http.Request) {
 	entries, err := s.db.ReadAll()
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		s.abortWithError(w, err, http.StatusInternalServerError)
 
 		return
 	}
@@ -73,7 +79,7 @@ func (s Server) GetEntries(w http.ResponseWriter, _ *http.Request) {
 	for _, entry := range entries {
 		err = s.templates.ExecuteTemplate(w, tmplRowPath, tmplData{Entry: entry})
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			s.abortWithError(w, err, http.StatusInternalServerError)
 		}
 	}
 }
@@ -81,7 +87,7 @@ func (s Server) GetEntries(w http.ResponseWriter, _ *http.Request) {
 func (s Server) AllowUserToEditRow(w http.ResponseWriter, r *http.Request) {
 	err := s.changeTemplate(w, r, tmplEditRowPath)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		s.abortWithError(w, err, http.StatusBadRequest)
 	}
 }
 
@@ -109,7 +115,7 @@ func (s Server) ResetView(w http.ResponseWriter, r *http.Request) {
 
 	err := s.changeTemplate(w, r, tmplRowPath)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		s.abortWithError(w, err, http.StatusBadRequest)
 	}
 }
 
@@ -117,14 +123,14 @@ func (s Server) SubmitEdits(w http.ResponseWriter, r *http.Request) {
 	idStr := chi.URLParam(r, "id")
 	id, err := strconv.Atoi(idStr)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		s.abortWithError(w, err, http.StatusBadRequest)
 
 		return
 	}
 
 	err = r.ParseForm()
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		s.abortWithError(w, err, http.StatusBadRequest)
 
 		return
 	}
@@ -140,7 +146,7 @@ func (s Server) SubmitEdits(w http.ResponseWriter, r *http.Request) {
 
 		err := s.templates.ExecuteTemplate(w, tmplEditRowPath, data)
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			s.abortWithError(w, err, http.StatusInternalServerError)
 		}
 
 		return
@@ -148,7 +154,7 @@ func (s Server) SubmitEdits(w http.ResponseWriter, r *http.Request) {
 
 	err = s.db.UpdateEntry(updatedEntry)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		s.abortWithError(w, err, http.StatusBadRequest)
 
 		return
 	}
@@ -184,14 +190,14 @@ func (s Server) DeleteRow(w http.ResponseWriter, r *http.Request) {
 	idStr := chi.URLParam(r, "id")
 	id, err := strconv.Atoi(idStr)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		s.abortWithError(w, err, http.StatusBadRequest)
 
 		return
 	}
 
 	err = s.db.DeleteEntry(uint16(id))
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		s.abortWithError(w, err, http.StatusBadRequest)
 	}
 
 	w.Header().Set("Content-Type", "text/html")
@@ -203,21 +209,21 @@ func (s Server) DeleteRow(w http.ResponseWriter, r *http.Request) {
 	`, id)))
 
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		s.abortWithError(w, err, http.StatusInternalServerError)
 	}
 }
 
 func (s Server) ShowAddRowForm(w http.ResponseWriter, _ *http.Request) {
 	err := s.templates.ExecuteTemplate(w, tmplAddRowPath, tmplData{Entry: &sources.Entry{}})
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		s.abortWithError(w, err, http.StatusInternalServerError)
 	}
 }
 
 func (s Server) AddNewEntry(w http.ResponseWriter, r *http.Request) {
 	err := r.ParseForm()
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		s.abortWithError(w, err, http.StatusBadRequest)
 
 		return
 	}
@@ -235,14 +241,14 @@ func (s Server) AddNewEntry(w http.ResponseWriter, r *http.Request) {
 
 		err := s.templates.ExecuteTemplate(w, tmplAddRowPath, data)
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			s.abortWithError(w, err, http.StatusInternalServerError)
 		}
 		return
 	}
 
 	err = s.db.AddEntry(newEntry)
 	if err != nil {
-		http.Error(w, "Failed to add entry: "+err.Error(), http.StatusInternalServerError)
+		s.abortWithError(w, err, http.StatusInternalServerError)
 
 		return
 	}
@@ -254,6 +260,6 @@ func (s Server) AddNewEntry(w http.ResponseWriter, r *http.Request) {
 func (s Server) OpenDeleteDialog(w http.ResponseWriter, r *http.Request) {
 	err := s.changeTemplate(w, r, tmplDeleteDialogPath)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		s.abortWithError(w, err, http.StatusBadRequest)
 	}
 }
