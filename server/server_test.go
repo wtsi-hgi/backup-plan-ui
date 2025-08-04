@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -157,7 +158,7 @@ func TestSubmitEdits(t *testing.T) {
 				t.Error(err)
 			}
 
-			changedEntry, err := s.DB.GetEntry(test.entry.ID)
+			changedEntry, err := s.db.GetEntry(test.entry.ID)
 			if err != nil {
 				t.Error(err)
 			}
@@ -283,9 +284,14 @@ func createServer(t *testing.T) (Server, []*sources.Entry) {
 
 	entries, dbPath := sources.CreateTestData(t)
 
+	templates, err := template.ParseGlob(filepath.Join("..", templatesDir, "*.html"))
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	server := Server{
-		DB:        sources.CSVSource{Path: dbPath},
-		templates: template.Must(template.ParseGlob("../templates/*.html")),
+		db:        sources.CSVSource{Path: dbPath},
+		templates: templates,
 	}
 
 	return server, entries

@@ -28,7 +28,7 @@ func main() {
 	dbPath := os.Args[1]
 	fmt.Println("Using database:", dbPath)
 
-	server, err := server.NewServer(sources.CSVSource{Path: dbPath}, templateFiles)
+	srv, err := server.NewServer(sources.CSVSource{Path: dbPath}, templateFiles)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -40,17 +40,17 @@ func main() {
 
 	r := chi.NewRouter()
 
-	r.Get("/", server.ServeHome)
+	r.Get("/", srv.ServeHome)
 
-	r.Get("/entries", server.GetEntries)
-	r.Get("/actions/edit/{id}", server.AllowUserToEditRow)
-	r.Put("/actions/submit/{id}", server.SubmitEdits)
-	r.Get("/actions/cancel/{id}", server.ResetView)
-	r.Get("/actions/delete/{id}", server.DeleteRow)
-	r.Get("/actions/startDelete/{id}", server.OpenDeleteDialog)
+	r.Get("/entries", srv.GetEntries)
+	r.Get("/actions/edit/{id}", srv.AllowUserToEditRow)
+	r.Put("/actions/submit/{id}", srv.SubmitEdits)
+	r.Get("/actions/cancel/{id}", srv.ResetView)
+	r.Get("/actions/delete/{id}", srv.DeleteRow)
+	r.Get("/actions/startDelete/{id}", srv.OpenDeleteDialog)
 	r.Get("/actions/cancelDel", returnEmpty)
-	r.Get("/actions/add", server.ShowAddRowForm)
-	r.Put("/actions/add", server.AddNewEntry)
+	r.Get("/actions/add", srv.ShowAddRowForm)
+	r.Put("/actions/add", srv.AddNewEntry)
 
 	r.Handle("/static/*", http.FileServerFS(staticFiles))
 

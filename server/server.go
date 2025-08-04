@@ -6,21 +6,24 @@ import (
 	"fmt"
 	"html/template"
 	"net/http"
+	"path/filepath"
 	"strconv"
 
 	"github.com/go-chi/chi/v5"
 )
 
 type Server struct {
-	DB        sources.DataSource
+	db        sources.DataSource
 	templates *template.Template
 }
 
+const templatesDir = "templates"
+
 func NewServer(db sources.DataSource, fs embed.FS) (*Server, error) {
-	t, err := template.ParseFS(fs, "templates/*.html")
+	t, err := template.ParseFS(fs, filepath.Join(templatesDir, "*.html"))
 
 	return &Server{
-		DB:        db,
+		db:        db,
 		templates: t,
 	}, err
 }
@@ -53,14 +56,14 @@ type tmplData struct {
 	Errors map[string]string
 }
 
-func (s Server) ServeHome(w http.ResponseWriter, r *http.Request) {
+func (s Server) ServeHome(w http.ResponseWriter, _ *http.Request) {
 	if err := s.templates.ExecuteTemplate(w, tmplIndexPath, nil); err != nil {
 		http.Error(w, "Template rendering failed", http.StatusInternalServerError)
 	}
 }
 
 func (s Server) GetEntries(w http.ResponseWriter, _ *http.Request) {
-	entries, err := s.DB.ReadAll()
+	entries, err := s.db.ReadAll()
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 
@@ -89,7 +92,7 @@ func (s Server) changeTemplate(w http.ResponseWriter, r *http.Request, tmplPath 
 		return err
 	}
 
-	entry, err := s.DB.GetEntry(uint16(id))
+	entry, err := s.db.GetEntry(uint16(id))
 	if err != nil {
 		return err
 	}
@@ -143,7 +146,7 @@ func (s Server) SubmitEdits(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = s.DB.UpdateEntry(updatedEntry)
+	err = s.db.UpdateEntry(updatedEntry)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 
@@ -186,7 +189,7 @@ func (s Server) DeleteRow(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = s.DB.DeleteEntry(uint16(id))
+	err = s.db.DeleteEntry(uint16(id))
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 	}
@@ -237,7 +240,7 @@ func (s Server) AddNewEntry(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = s.DB.AddEntry(newEntry)
+	err = s.db.AddEntry(newEntry)
 	if err != nil {
 		http.Error(w, "Failed to add entry: "+err.Error(), http.StatusInternalServerError)
 
