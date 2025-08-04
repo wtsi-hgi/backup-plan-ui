@@ -159,6 +159,8 @@ func (s Server) SubmitEdits(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	slog.Info(fmt.Sprintf("Updated entry: %+v\n", *updatedEntry))
+
 	s.ResetView(w, r)
 }
 
@@ -199,6 +201,8 @@ func (s Server) DeleteRow(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		s.abortWithError(w, err, http.StatusBadRequest)
 	}
+
+	slog.Info(fmt.Sprintf("Deleted entry with id %d\n", id))
 
 	w.Header().Set("Content-Type", "text/html")
 	_, err = w.Write([]byte(fmt.Sprintf(`
@@ -252,6 +256,8 @@ func (s Server) AddNewEntry(w http.ResponseWriter, r *http.Request) {
 
 		return
 	}
+
+	slog.Info(fmt.Sprintf("Added new entry: %+v\n", *newEntry))
 
 	// Set HX-Trigger to refresh the entry table
 	w.Header().Set("HX-Trigger", "entriesChanged")

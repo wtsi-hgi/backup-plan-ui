@@ -26,7 +26,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	log.SetFlags(log.Lshortfile) // timestamp comes from systemd
+	log.SetFlags(0) // timestamp comes from systemd
 
 	dbPath := os.Args[1]
 	slog.Info("Using database: " + dbPath)
