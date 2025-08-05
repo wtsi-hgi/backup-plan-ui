@@ -117,11 +117,11 @@
         <button class="btn primary"
             hx-put="actions/submit/{{.Entry.ID}}"
             hx-include="closest tr">
-            Save
+            <i class="fa-solid fa-check fa-lg"></i>
         </button>
         <button class="btn danger" 
             hx-get="actions/cancel/{{.Entry.ID}}">
-            Cancel
+            <i class="fa-solid fa-xmark fa-lg"></i>
         </button>
     </td>
   </tr>
