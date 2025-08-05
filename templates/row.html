@@ -1,7 +1,17 @@
 <tr data-id="{{.Entry.ID}}">
     <td>{{.Entry.ReportingName}}</td>
-    <td>{{.Entry.ReportingRoot}}</td>
-    <td>{{.Entry.Directory}}</td>
+    <td>
+      <span class="path">{{ShortenPath .Entry.ReportingRoot}}</span>
+      <div class="tooltip">
+        <span class="tooltiptext path">{{.Entry.ReportingRoot}}</span>
+      </div>
+    </td>
+    <td>
+      <span class="path">{{ShortenPath .Entry.Directory}}</span>
+      <div class="tooltip">
+        <span class="tooltiptext path">{{.Entry.Directory}}</span>
+      </div>
+    </td>
     <td>{{.Entry.Instruction}}</td>
     <td>{{.Entry.Match}}</td>
     <td>{{.Entry.Ignore}}</td>

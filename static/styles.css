@@ -19,6 +19,10 @@ th, td {
 th {
     background-color: #f2f2f2;
     font-weight: 600;
+}
+
+thead tr {
+    background-color: #f2f2f2;
     position: sticky;
     top: 0;
 }
@@ -242,21 +246,35 @@ tr.editing {
 }
   
 .tooltip .tooltiptext {
-  visibility: hidden;
-  width: 360px;
+  display: none;
   background-color: rgb(122, 122, 122);
   color: #fff;
-  text-align: center;
   border-radius: 6px;
-  padding: 5px;
+  padding: 6px 10px;
   font-weight: 100;
 
   position: absolute;
-  z-index: 1;
-  top: 100%;
-  margin-left: -180px;
+  /* z-index: 1; */
+  min-width: 360px;
 
-  margin-top: 12px;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+
+  /* margin-top: 12px; */
+}
+
+.tooltip .tooltiptext.path {
+  left: 150%;
+  
+  min-width: 100px;
+  max-width: 1200px;
+  
+  white-space: nowrap;       
+  overflow-x: auto;
+  text-align: left;
+  font-family: monospace;
+  font-size: 13px;
 }
 
 .tooltip .tooltiptext.top {
@@ -267,8 +285,8 @@ tr.editing {
     left: 150%;
 }
 
-.tooltip:hover .tooltiptext {
-  visibility: visible;
+.path:hover + .tooltip .tooltiptext {
+  display: unset;
 }
 
 .tooltip .tooltiptext::after {

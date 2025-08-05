@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"path/filepath"
 	"strconv"
+	"strings"
 
 	"github.com/go-chi/chi/v5"
 )
@@ -21,7 +22,13 @@ type Server struct {
 const templatesDir = "templates"
 
 func NewServer(db sources.DataSource, fs embed.FS) (*Server, error) {
-	t, err := template.ParseFS(fs, filepath.Join(templatesDir, "*.html"))
+	funcMap := template.FuncMap{
+		"ShortenPath": ShortenPath, // Register the function
+	}
+
+	t, err := template.New("").
+		Funcs(funcMap).
+		ParseFS(fs, filepath.Join(templatesDir, "*.html"))
 
 	return &Server{
 		db:        db,
@@ -270,4 +277,25 @@ func (s Server) OpenDeleteDialog(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		s.abortWithError(w, err, http.StatusBadRequest)
 	}
+}
+
+func ShortenPath(path string) string {
+	maxParts := 3
+
+	parts := strings.Split(path, "/")
+
+	// Handle absolute path
+	prefix := ""
+	if strings.HasPrefix(path, "/") {
+		prefix = "/"
+		parts = parts[1:] // remove the empty string at index 0
+	}
+
+	if len(parts) <= maxParts {
+		return prefix + strings.Join(parts, "/")
+	}
+
+	first := parts[0]
+	lastParts := parts[len(parts)-(maxParts-1):]
+	return prefix + first + "/.../" + strings.Join(lastParts, "/")
 }
