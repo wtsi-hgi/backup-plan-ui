@@ -1,14 +1,46 @@
 <table class="table">
   <thead>
     <tr>
-      <th>Reporting name</th>
-      <th>Reporting root</th>
-      <th>Directory</th>
-      <th>Instruction</th>
-      <th>Match</th>
-      <th>Ignore</th>
-      <th>Requestor</th>
-      <th>Faculty</th>
+      <th>
+        <div class="tooltip">Reporting name
+          <span class="tooltiptext right">A simple name that makes the report line easy to interpret.</span>
+        </div>
+      </th>
+      <th>
+        <div class="tooltip">Reporting root
+          <span class="tooltiptext top">The lustre directory root for the report : typically full path to project or user folder (or subfolder, if appropriate).</span>
+        </div>
+      </th>
+      <th>
+        <div class="tooltip">Directory
+          <span class="tooltiptext top">Full path to the folder where you want a backup or no backup to happen.</span>
+        </div>
+      </th>
+      <th>
+        <div class="tooltip">Instruction
+          <span class="tooltiptext top">In the specified folder, do you want a backup, no backup, or a temp backup to happen? Temp means the backup is kept for 3 months.</span>
+        </div>
+      </th>
+      <th>
+        <div class="tooltip">Match
+          <span class="tooltiptext top">Only back up the file paths in the folder that match the given expression(s), only available when instruction is 'backup'.</span>
+        </div>
+      </th>
+      <th>
+        <div class="tooltip">Ignore
+          <span class="tooltiptext top">Never back up the file paths that match the given expression(s), only available when instruction is 'backup'.</span>
+        </div>
+      </th>
+      <th>
+        <div class="tooltip">Requestor
+          <span class="tooltiptext top">User id of the person requesting the plan.</span>
+        </div>
+      </th>
+      <th>
+        <div class="tooltip">Faculty
+          <span class="tooltiptext top">Faculty group / team of the person requesting the plan.</span>
+        </div>
+      </th>
       <th>Actions</th>
     </tr>
   </thead>
