@@ -5,6 +5,7 @@ package sources
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/gocarina/gocsv"
@@ -12,7 +13,7 @@ import (
 
 const NumTestDataRows = 3
 
-func CreateTestData(t *testing.T) ([]*Entry, string) {
+func CreateTestEntries(t *testing.T) []*Entry {
 	t.Helper()
 
 	baseEntry := Entry{
@@ -34,6 +35,14 @@ func CreateTestData(t *testing.T) ([]*Entry, string) {
 		entries[i] = &newEntry
 	}
 
+	return entries
+}
+
+func CreateTestCSV(t *testing.T) ([]*Entry, string) {
+	t.Helper()
+
+	entries := CreateTestEntries(t)
+
 	file, err := os.CreateTemp(t.TempDir(), "*.csv")
 	if err != nil {
 		t.Fatal(err)
@@ -47,4 +56,32 @@ func CreateTestData(t *testing.T) ([]*Entry, string) {
 	}
 
 	return entries, file.Name()
+}
+
+func createTestTable(t *testing.T) ([]*Entry, SQLiteSource) {
+	t.Helper()
+
+	entries := CreateTestEntries(t)
+	for _, entry := range entries {
+		entry.ID += 1
+	}
+
+	dbFile := filepath.Join(t.TempDir(), "test.db")
+
+	sq, err := NewSQLiteSource(dbFile)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = sq.CreateTable()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = sq.writeEntries(entries)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	return entries, sq
 }

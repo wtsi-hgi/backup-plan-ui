@@ -359,7 +359,7 @@ func createFormFromEntry(entry sources.Entry) url.Values {
 func createServer(t *testing.T) (Server, []*sources.Entry) {
 	t.Helper()
 
-	entries, dbPath := sources.CreateTestData(t)
+	entries, dbPath := sources.CreateTestCSV(t)
 
 	templates, err := template.ParseGlob(filepath.Join("..", templatesDir, "*.html"))
 	if err != nil {
