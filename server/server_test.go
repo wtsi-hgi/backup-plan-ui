@@ -174,19 +174,56 @@ func TestSubmitEdits(t *testing.T) {
 	}
 }
 
-func createFormFromEntry(entry sources.Entry) url.Values {
-	form := make(url.Values)
+func TestDeleteRow(t *testing.T) {
+	s, originalEntries := createServer(t)
 
-	form.Set(ReportingName.string(), entry.ReportingName)
-	form.Set(ReportingRoot.string(), entry.ReportingRoot)
-	form.Set(Directory.string(), entry.Directory)
-	form.Set(Instruction.string(), string(entry.Instruction))
-	form.Set(Match.string(), entry.Match)
-	form.Set(Ignore.string(), entry.Ignore)
-	form.Set(Requestor.string(), entry.Requestor)
-	form.Set(Faculty.string(), entry.Faculty)
+	tests := []struct {
+		name     string
+		entry    *sources.Entry
+		newValue string
+	}{
+		{
+			name:  "You can delete the first entry",
+			entry: originalEntries[0],
+		},
+		{
+			name:  "You can delete a middle entry",
+			entry: originalEntries[max(0, sources.NumTestDataRows-2)],
+		},
+		{
+			name:  "You can delete the last entry",
+			entry: originalEntries[sources.NumTestDataRows-1],
+		},
+	}
 
-	return form
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			w := httptest.NewRecorder()
+
+			r := makeRequest(test.entry.ID)
+
+			s.DeleteRow(w, r)
+
+			_ = getBodyAndCheckStatusOK(t, w)
+
+			entries, err := s.db.ReadAll()
+			if err != nil {
+				t.Error(err)
+			}
+
+			if ok, err := So(entries, ShouldNotContain, test.entry); !ok {
+				t.Error(err)
+			}
+		})
+	}
+}
+
+func makeRequest(id uint16) *http.Request {
+	r := httptest.NewRequest(http.MethodGet, "/", nil)
+	ctx := chi.NewRouteContext()
+	ctx.URLParams.Add("id", fmt.Sprint(id))
+
+	return r.WithContext(context.WithValue(r.Context(), chi.RouteCtxKey, ctx))
 }
 
 func TestValidateForm(t *testing.T) {
@@ -277,6 +314,21 @@ func TestValidateForm(t *testing.T) {
 			}
 		})
 	}
+}
+
+func createFormFromEntry(entry sources.Entry) url.Values {
+	form := make(url.Values)
+
+	form.Set(ReportingName.string(), entry.ReportingName)
+	form.Set(ReportingRoot.string(), entry.ReportingRoot)
+	form.Set(Directory.string(), entry.Directory)
+	form.Set(Instruction.string(), string(entry.Instruction))
+	form.Set(Match.string(), entry.Match)
+	form.Set(Ignore.string(), entry.Ignore)
+	form.Set(Requestor.string(), entry.Requestor)
+	form.Set(Faculty.string(), entry.Faculty)
+
+	return form
 }
 
 func createServer(t *testing.T) (Server, []*sources.Entry) {
