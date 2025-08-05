@@ -193,15 +193,15 @@ func TestGetNextID(t *testing.T) {
 		expectedID uint16
 	}{
 		{
-			entries:    []*Entry{&Entry{ID: 0}, &Entry{ID: 1}, &Entry{ID: 2}},
+			entries:    []*Entry{{ID: 0}, {ID: 1}, {ID: 2}},
 			expectedID: 3,
 		},
 		{
-			entries:    []*Entry{&Entry{ID: 0}, &Entry{ID: 2}, &Entry{ID: 3}},
+			entries:    []*Entry{{ID: 0}, {ID: 2}, {ID: 3}},
 			expectedID: 1,
 		},
 		{
-			entries:    []*Entry{&Entry{ID: 1}, &Entry{ID: 5}, &Entry{ID: 6}},
+			entries:    []*Entry{{ID: 1}, {ID: 5}, {ID: 6}},
 			expectedID: 0,
 		},
 	}
