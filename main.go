@@ -6,6 +6,7 @@ import (
 	"embed"
 	"fmt"
 	"log"
+	"log/slog"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -25,8 +26,14 @@ func main() {
 		os.Exit(1)
 	}
 
-	dbPath := os.Args[1]
-	fmt.Println("Using database:", dbPath)
+	log.SetFlags(0) // timestamp comes from systemd
+
+	dbPath, err := filepath.Abs(os.Args[1])
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	slog.Info("Using database: " + dbPath)
 
 	srv, err := server.NewServer(sources.CSVSource{Path: dbPath}, templateFiles)
 	if err != nil {
