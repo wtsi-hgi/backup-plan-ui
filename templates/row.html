@@ -8,13 +8,13 @@
     <td>{{.Entry.Requestor}}</td>
     <td>{{.Entry.Faculty}}</td>
     <td>
-      <button class="btn"
+      <button class="btn" title="edit row"
             hx-get="actions/edit/{{.Entry.ID}}"
             hx-target="closest tr" 
             hx-swap="outerHTML">
             <i class="fa-solid fa-pen-to-square fa-lg"></i>
       </button>
-      <button class="btn danger" 
+      <button class="btn danger" title="delete row" 
         hx-get="actions/startDelete/{{.Entry.ID}}"
         hx-target="body" 
         hx-swap="beforeend">

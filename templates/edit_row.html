@@ -114,12 +114,12 @@
       </div>
     </td>
     <td>
-        <button class="btn primary"
+        <button class="btn primary" title="submit changes"
             hx-put="actions/submit/{{.Entry.ID}}"
             hx-include="closest tr">
             <i class="fa-solid fa-check fa-lg"></i>
         </button>
-        <button class="btn danger" 
+        <button class="btn danger" title="cancel edit"
             hx-get="actions/cancel/{{.Entry.ID}}">
             <i class="fa-solid fa-xmark fa-lg"></i>
         </button>
