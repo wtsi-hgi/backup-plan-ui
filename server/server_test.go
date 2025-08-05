@@ -180,7 +180,6 @@ func TestDeleteRow(t *testing.T) {
 	tests := []struct {
 		name     string
 		entry    *sources.Entry
-		newValue string
 	}{
 		{
 			name:  "You can delete the first entry",
@@ -199,7 +198,6 @@ func TestDeleteRow(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			w := httptest.NewRecorder()
-
 			r := makeRequest(test.entry.ID)
 
 			s.DeleteRow(w, r)
