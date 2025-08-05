@@ -197,12 +197,12 @@ func (s Server) DeleteRow(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = s.db.DeleteEntry(uint16(id))
+	entry, err := s.db.DeleteEntry(uint16(id))
 	if err != nil {
 		s.abortWithError(w, err, http.StatusInternalServerError)
 	}
 
-	slog.Info(fmt.Sprintf("Deleted entry with id %d\n", id))
+	slog.Info(fmt.Sprintf("Deleted entry: %+v\n", *entry))
 
 	w.Header().Set("Content-Type", "text/html")
 	_, err = w.Write([]byte(fmt.Sprintf(`
@@ -257,7 +257,7 @@ func (s Server) AddNewEntry(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	slog.Info(fmt.Sprintf("Added new entry: %+v\n", *newEntry))
+	slog.Info(fmt.Sprintf("Added entry: %+v\n", *newEntry))
 
 	// Set HX-Trigger to refresh the entry table
 	w.Header().Set("HX-Trigger", "entriesChanged")

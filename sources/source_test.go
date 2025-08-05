@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/gocarina/gocsv"
+	. "github.com/smarty/assertions"
 )
 
 func TestReadAll(t *testing.T) {
@@ -65,17 +66,19 @@ func TestUpdateEntry(t *testing.T) {
 func TestDeleteEntry(t *testing.T) {
 	rowsToTest := []uint16{0, max(0, NumTestDataRows-2), NumTestDataRows - 1}
 
-	for _, id := range rowsToTest {
-		idToDelete := uint16(id)
-
+	for _, idToDelete := range rowsToTest {
 		t.Run(fmt.Sprintf("Entry %d", idToDelete), func(t *testing.T) {
 			entriesBefore, testPath := createTestData(t)
 
 			csvSource := CSVSource{Path: testPath}
 
-			err := csvSource.DeleteEntry(idToDelete)
+			entry, err := csvSource.DeleteEntry(idToDelete)
 			if err != nil {
 				t.Fatal(err)
+			}
+
+			if ok, err := So(entry, ShouldResemble, entriesBefore[idToDelete]); !ok {
+				t.Error(err)
 			}
 
 			entriesAfter, err := csvSource.ReadAll()
@@ -83,9 +86,8 @@ func TestDeleteEntry(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			if len(entriesAfter) != (len(entriesBefore) - 1) {
-				t.Errorf("CSV has the wrong number of entries.\nGot %+v, expected %+v",
-					entriesAfter[0], entriesBefore[0])
+			if ok, err := So(entriesAfter, ShouldHaveLength, len(entriesBefore)-1); !ok {
+				t.Error(err)
 			}
 
 			for _, e := range entriesAfter {

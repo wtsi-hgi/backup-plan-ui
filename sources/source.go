@@ -11,7 +11,7 @@ type DataSource interface {
 	ReadAll() ([]*Entry, error)
 	GetEntry(id uint16) (*Entry, error)
 	UpdateEntry(newEntry *Entry) error
-	DeleteEntry(id uint16) error
+	DeleteEntry(id uint16) (*Entry, error)
 	AddEntry(entry *Entry) error
 }
 
@@ -104,20 +104,20 @@ func (c CSVSource) writeEntries(entries []*Entry) error {
 	return gocsv.MarshalFile(&entries, out)
 }
 
-func (c CSVSource) DeleteEntry(id uint16) error {
+func (c CSVSource) DeleteEntry(id uint16) (*Entry, error) {
 	entries, err := c.ReadAll()
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	_, index, err := getMatchingEntryWithID(id, entries)
+	entry, index, err := getMatchingEntryWithID(id, entries)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	entries = append(entries[:index], entries[index+1:]...)
 
-	return c.writeEntries(entries)
+	return entry, c.writeEntries(entries)
 }
 
 func (c CSVSource) AddEntry(newEntry *Entry) error {
