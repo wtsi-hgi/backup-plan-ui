@@ -129,14 +129,14 @@
           </div>
         </td>
         <td>
-            <button class="btn primary" 
+            <button class="btn primary" title="submit row"
             hx-put="actions/add"
             hx-include="closest tr">
-            Save
+            <i class="fa-solid fa-check fa-lg"></i>
         </button>
-        <button class="btn danger" 
+        <button class="btn danger" title="cancel add"
             hx-get="actions/cancel/new">
-            Cancel
+            <i class="fa-solid fa-xmark fa-lg"></i>
         </button>
         </td>
     </tr>
