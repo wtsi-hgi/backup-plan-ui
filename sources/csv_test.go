@@ -9,19 +9,56 @@ import (
 )
 
 func TestCSVSource_ReadAll(t *testing.T) {
-	originalEntries, testPath := CreateTestCSV(t)
+	entries, testPath := CreateTestCSV(t)
 
 	csvSource := CSVSource{Path: testPath}
 
-	testDataSourceReadAll(t, csvSource, originalEntries)
+	testDataSourceReadAll(t, csvSource, entries)
 }
 
 func TestCSVSource_GetEntry(t *testing.T) {
-	originalEntries, testPath := CreateTestCSV(t)
+	entries, testPath := CreateTestCSV(t)
 
 	csvSource := CSVSource{Path: testPath}
 
-	testDataSourceGetEntry(t, csvSource, originalEntries)
+	testDataSourceGetEntry(t, csvSource, entries)
+}
+
+func TestCSVSource_UpdateEntry(t *testing.T) {
+	entries, testPath := CreateTestCSV(t)
+
+	csvSource := CSVSource{Path: testPath}
+
+	testDataSourceUpdateEntry(t, csvSource, entries)
+}
+
+func TestCSVSource_DeleteEntry(t *testing.T) {
+	testCases := []struct {
+		name    string
+		entryID uint16
+	}{
+		{"Delete first entry", 0},
+		{"Delete middle entry", max(0, NumTestDataRows-2)},
+		{"Delete last entry", NumTestDataRows - 1},
+	}
+
+	for _, tt := range testCases {
+		t.Run(tt.name, func(t *testing.T) {
+			entries, testPath := CreateTestCSV(t)
+
+			csvSource := CSVSource{Path: testPath}
+
+			testDataSourceDeleteEntry(t, csvSource, entries[tt.entryID], tt.entryID)
+		})
+	}
+}
+
+func TestCSVSource_AddEntry(t *testing.T) {
+	entries, filePath := CreateTestCSV(t)
+
+	csvSource := CSVSource{Path: filePath}
+
+	testDataSourceAddEntry(t, csvSource, entries)
 }
 
 func TestCSVSource_WriteEntries(t *testing.T) {
