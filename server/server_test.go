@@ -177,43 +177,70 @@ func TestSubmitEdits(t *testing.T) {
 func TestDeleteRow(t *testing.T) {
 	s, originalEntries := createServer(t)
 
-	tests := []struct {
-		name     string
-		entry    *sources.Entry
-	}{
-		{
-			name:  "You can delete the first entry",
-			entry: originalEntries[0],
-		},
-		{
-			name:  "You can delete a middle entry",
-			entry: originalEntries[max(0, sources.NumTestDataRows-2)],
-		},
-		{
-			name:  "You can delete the last entry",
-			entry: originalEntries[sources.NumTestDataRows-1],
-		},
-	}
+	t.Run("You can delete a valid entry", func(t *testing.T) {
+		entry := originalEntries[0]
 
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			w := httptest.NewRecorder()
-			r := makeRequest(test.entry.ID)
+		w := httptest.NewRecorder()
+		r := makeRequest(entry.ID)
 
-			s.DeleteRow(w, r)
+		s.DeleteRow(w, r)
 
-			_ = getBodyAndCheckStatusOK(t, w)
+		_ = getBodyAndCheckStatusOK(t, w)
 
-			entries, err := s.db.ReadAll()
-			if err != nil {
-				t.Error(err)
-			}
+		entries, err := s.db.ReadAll()
+		if err != nil {
+			t.Error(err)
+		}
 
-			if ok, err := So(entries, ShouldNotContain, test.entry); !ok {
-				t.Error(err)
-			}
-		})
-	}
+		if ok, err := So(entries, ShouldNotContain, entry); !ok {
+			t.Error(err)
+		}
+	})
+
+	t.Run("You must provide a valid ID", func(t *testing.T) {
+		w := httptest.NewRecorder()
+		r := httptest.NewRequest(http.MethodGet, "/", nil)
+		ctx := chi.NewRouteContext()
+		ctx.URLParams.Add("id", "invalid ID")
+
+		r = r.WithContext(context.WithValue(r.Context(), chi.RouteCtxKey, ctx))
+
+		s.DeleteRow(w, r)
+
+		res := w.Result()
+		defer res.Body.Close()
+
+		if ok, err := So(res.StatusCode, ShouldEqual, http.StatusBadRequest); !ok {
+			t.Error(err)
+		}
+	})
+
+	t.Run("You must provide an ID currently in use", func(t *testing.T) {
+		w := httptest.NewRecorder()
+		r := httptest.NewRequest(http.MethodGet, "/", nil)
+		ctx := chi.NewRouteContext()
+		ctx.URLParams.Add("id", fmt.Sprint(sources.NumTestDataRows))
+
+		r = r.WithContext(context.WithValue(r.Context(), chi.RouteCtxKey, ctx))
+
+		s.DeleteRow(w, r)
+
+		res := w.Result()
+		defer res.Body.Close()
+
+		if ok, err := So(res.StatusCode, ShouldEqual, http.StatusInternalServerError); !ok {
+			t.Error(err)
+		}
+
+		errMsg, err := io.ReadAll(res.Body)
+		if ok, err := So(err, ShouldBeNil); !ok {
+			t.Fatal(err)
+		}
+
+		if ok, err := So(string(errMsg), ShouldContainSubstring, sources.ErrNoEntry.Error()); !ok {
+			t.Error(err)
+		}
+	})
 }
 
 func makeRequest(id uint16) *http.Request {
