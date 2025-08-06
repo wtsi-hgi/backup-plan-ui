@@ -33,10 +33,12 @@ func TestSQLiteSource_DeleteEntry(t *testing.T) {
 	testCases := []struct {
 		name    string
 		entryID uint16
+		wantErr error
 	}{
-		{"Delete first entry", 1},
-		{"Delete middle entry", max(1, NumTestDataRows-1)},
-		{"Delete last entry", NumTestDataRows},
+		{"Delete first entry", 1, nil},
+		{"Delete middle entry", max(1, NumTestDataRows-1), nil},
+		{"Delete last entry", NumTestDataRows, nil},
+		{"Delete non-existing entry", NumTestDataRows + 100, ErrNoEntry},
 	}
 
 	for _, tt := range testCases {
@@ -44,7 +46,14 @@ func TestSQLiteSource_DeleteEntry(t *testing.T) {
 			entries, sq := createTestTable(t)
 			defer sq.Close()
 
-			testDataSourceDeleteEntry(t, sq, entries[tt.entryID-1], tt.entryID)
+			var e *Entry
+			if tt.entryID > NumTestDataRows {
+				e = nil
+			} else {
+				e = entries[tt.entryID-1]
+			}
+
+			testDataSourceDeleteEntry(t, sq, e, tt.entryID, tt.wantErr)
 		})
 	}
 }

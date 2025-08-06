@@ -36,10 +36,12 @@ func TestCSVSource_DeleteEntry(t *testing.T) {
 	testCases := []struct {
 		name    string
 		entryID uint16
+		wantErr error
 	}{
-		{"Delete first entry", 0},
-		{"Delete middle entry", max(0, NumTestDataRows-2)},
-		{"Delete last entry", NumTestDataRows - 1},
+		{"Delete first entry", 0, nil},
+		{"Delete middle entry", max(0, NumTestDataRows-2), nil},
+		{"Delete last entry", NumTestDataRows - 1, nil},
+		{"Delete non-existing entry", NumTestDataRows + 100, ErrNoEntry},
 	}
 
 	for _, tt := range testCases {
@@ -48,7 +50,14 @@ func TestCSVSource_DeleteEntry(t *testing.T) {
 
 			csvSource := CSVSource{Path: testPath}
 
-			testDataSourceDeleteEntry(t, csvSource, entries[tt.entryID], tt.entryID)
+			var e *Entry
+			if tt.entryID > NumTestDataRows {
+				e = nil
+			} else {
+				e = entries[tt.entryID]
+			}
+
+			testDataSourceDeleteEntry(t, csvSource, e, tt.entryID, tt.wantErr)
 		})
 	}
 }
