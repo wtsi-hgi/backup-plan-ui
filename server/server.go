@@ -200,6 +200,8 @@ func (s Server) DeleteRow(w http.ResponseWriter, r *http.Request) {
 	entry, err := s.db.DeleteEntry(uint16(id))
 	if err != nil {
 		s.abortWithError(w, err, http.StatusInternalServerError)
+
+		return
 	}
 
 	slog.Info(fmt.Sprintf("Deleted entry: %+v\n", *entry))
