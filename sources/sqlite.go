@@ -2,6 +2,7 @@ package sources
 
 import (
 	"database/sql"
+	"errors"
 	"fmt"
 
 	_ "github.com/mattn/go-sqlite3"
@@ -97,16 +98,32 @@ func (sq SQLiteSource) GetEntry(id uint16) (*Entry, error) {
 }
 
 func (sq SQLiteSource) UpdateEntry(newEntry *Entry) error {
-	_, err := sq.db.Exec(updateEntryStmt, newEntry.ReportingName, newEntry.ReportingRoot, newEntry.Directory,
+	r, err := sq.db.Exec(updateEntryStmt, newEntry.ReportingName, newEntry.ReportingRoot, newEntry.Directory,
 		newEntry.Instruction, newEntry.Match, newEntry.Ignore, newEntry.Requestor, newEntry.Faculty, newEntry.ID)
 
-	return err
+	if err != nil {
+		return err
+	}
+
+	count, err := r.RowsAffected()
+	if err != nil {
+		return err
+	}
+
+	if count == 0 {
+		return ErrNoEntry
+	}
+
+	return nil
 }
 
 func (sq SQLiteSource) DeleteEntry(id uint16) (*Entry, error) {
 	row := sq.db.QueryRow(deleteEntryStmt, id)
 
 	entry, err := sq.scanEntry(row)
+	if err != nil && errors.Is(err, sql.ErrNoRows) {
+		return nil, ErrNoEntry
+	}
 
 	return entry, err
 }

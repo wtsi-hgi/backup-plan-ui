@@ -1,6 +1,7 @@
 package sources
 
 import (
+	"errors"
 	"testing"
 
 	. "github.com/smarty/assertions"
@@ -46,29 +47,51 @@ func testDataSourceUpdateEntry(t *testing.T, ds DataSource, originalEntries []*E
 	newEntry := originalEntries[0]
 	newEntry.ReportingName = "test_project_updated"
 
-	err := ds.UpdateEntry(newEntry)
-	if err != nil {
-		t.Fatal(err)
+	testCases := []struct {
+		name    string
+		entry   *Entry
+		wantErr error
+	}{
+		{"Update existing entry", newEntry, nil},
+		{"Update non-existing entry", &Entry{ID: NumTestDataRows + 100}, ErrNoEntry},
 	}
 
-	entries, err := ds.ReadAll()
-	if err != nil {
-		t.Fatal(err)
+	for _, tt := range testCases {
+		t.Run(tt.name, func(t *testing.T) {
+			err := ds.UpdateEntry(tt.entry)
+			if !errors.Is(err, tt.wantErr) {
+				t.Fatal(err)
+			}
+
+			if tt.wantErr != nil {
+				return
+			}
+
+			entries, err := ds.ReadAll()
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			if ok, err := So(entries, ShouldHaveLength, len(originalEntries)); !ok {
+				t.Fatal(err)
+			}
+
+			if ok, err := So(entries[0], ShouldResemble, tt.entry); !ok {
+				t.Error(err)
+			}
+		})
 	}
 
-	if ok, err := So(entries, ShouldHaveLength, len(originalEntries)); !ok {
-		t.Fatal(err)
-	}
-
-	if ok, err := So(entries[0], ShouldResemble, newEntry); !ok {
-		t.Error(err)
-	}
 }
 
-func testDataSourceDeleteEntry(t *testing.T, ds DataSource, originalEntry *Entry, idToDelete uint16) {
+func testDataSourceDeleteEntry(t *testing.T, ds DataSource, originalEntry *Entry, idToDelete uint16, expectedErr error) {
 	entry, err := ds.DeleteEntry(idToDelete)
-	if err != nil {
+	if !errors.Is(err, expectedErr) {
 		t.Fatal(err)
+	}
+
+	if expectedErr != nil {
+		return
 	}
 
 	if ok, err := So(entry, ShouldResemble, originalEntry); !ok {
