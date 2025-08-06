@@ -244,11 +244,12 @@ tr.editing {
 .tooltip .tooltiptext {
   visibility: hidden;
   width: 360px;
-  background-color: black;
+  background-color: rgb(122, 122, 122);
   color: #fff;
   text-align: center;
   border-radius: 6px;
   padding: 5px;
+  font-weight: 100;
 
   position: absolute;
   z-index: 1;
@@ -278,10 +279,10 @@ tr.editing {
     margin-left: -5px;
     border-width: 5px;
     border-style: solid;
-    border-color: transparent transparent black transparent;
+    border-color: transparent transparent rgb(122, 122, 122) transparent;
 }
 
 .tooltip .tooltiptext.right::after {
     left: 60px;
     margin-left: 0;
-  }
+}
