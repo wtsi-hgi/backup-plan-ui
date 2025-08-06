@@ -11,7 +11,29 @@ type SQLiteSource struct {
 	db *sql.DB
 }
 
-const entriesTableName = "entries"
+var createTableStmt = fmt.Sprintf(`CREATE TABLE IF NOT EXISTS entries (
+	id INTEGER PRIMARY KEY AUTOINCREMENT,
+	reporting_name TEXT,
+	reporting_root TEXT,
+	directory TEXT,
+	instruction TEXT CHECK ( instruction IN ('%s', '%s', '%s') ),
+	match TEXT,
+	ignore TEXT,
+	requestor TEXT,
+	faculty TEXT
+)`, Backup, NoBackup, TempBackup)
+
+const (
+	getAllStmt      = "SELECT * FROM entries"
+	getEntryStmt    = "SELECT * FROM entries WHERE id = ?"
+	deleteEntryStmt = "DELETE FROM entries WHERE id = ? RETURNING *"
+	updateEntryStmt = `UPDATE entries 
+					   SET reporting_name = ?, reporting_root = ?, directory = ?, instruction = ?, 
+                       match = ?, ignore = ?, requestor = ?, faculty = ? WHERE id = ?`
+	insertEntryStmt = `INSERT INTO entries 
+			          (reporting_name, reporting_root, directory, instruction, match, ignore, requestor, faculty) 
+			          VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+)
 
 // NewSQLiteSource opens a connection and stores it internally.
 // You are responsible to close it using Close().
@@ -26,25 +48,13 @@ func (sq SQLiteSource) Close() error {
 }
 
 func (sq SQLiteSource) CreateTable() error {
-	stmt := fmt.Sprintf(`CREATE TABLE IF NOT EXISTS '%s' (
-		id INTEGER PRIMARY KEY AUTOINCREMENT,
-		reporting_name TEXT,
-		reporting_root TEXT,
-		directory TEXT,
-		instruction TEXT CHECK ( instruction IN ('%s', '%s', '%s') ),
-		match TEXT,
-		ignore TEXT,
-		requestor TEXT,
-		faculty TEXT
-	)`, entriesTableName, Backup, NoBackup, TempBackup)
-
-	_, err := sq.db.Exec(stmt)
+	_, err := sq.db.Exec(createTableStmt)
 
 	return err
 }
 
 func (sq SQLiteSource) ReadAll() ([]*Entry, error) {
-	rows, err := sq.db.Query(fmt.Sprintf("SELECT * FROM %s", entriesTableName))
+	rows, err := sq.db.Query(getAllStmt)
 	if err != nil {
 		return nil, err
 	}
@@ -79,9 +89,7 @@ func (sq SQLiteSource) scanEntry(row scanner) (*Entry, error) {
 }
 
 func (sq SQLiteSource) GetEntry(id uint16) (*Entry, error) {
-	stmt := fmt.Sprintf("SELECT * FROM %s WHERE id = ?", entriesTableName)
-
-	row := sq.db.QueryRow(stmt, id)
+	row := sq.db.QueryRow(getEntryStmt, id)
 
 	entry, err := sq.scanEntry(row)
 
@@ -89,20 +97,14 @@ func (sq SQLiteSource) GetEntry(id uint16) (*Entry, error) {
 }
 
 func (sq SQLiteSource) UpdateEntry(newEntry *Entry) error {
-	stmt := fmt.Sprintf(`UPDATE %s SET 
-              reporting_name = ?, reporting_root = ?, directory = ?, instruction = ?, 
-              match = ?, ignore = ?, requestor = ?, faculty = ? WHERE id = ?`, entriesTableName)
-
-	_, err := sq.db.Exec(stmt, newEntry.ReportingName, newEntry.ReportingRoot, newEntry.Directory,
+	_, err := sq.db.Exec(updateEntryStmt, newEntry.ReportingName, newEntry.ReportingRoot, newEntry.Directory,
 		newEntry.Instruction, newEntry.Match, newEntry.Ignore, newEntry.Requestor, newEntry.Faculty, newEntry.ID)
 
 	return err
 }
 
 func (sq SQLiteSource) DeleteEntry(id uint16) (*Entry, error) {
-	stmt := fmt.Sprintf("DELETE FROM %s WHERE id = ? RETURNING *", entriesTableName)
-
-	row := sq.db.QueryRow(stmt, id)
+	row := sq.db.QueryRow(deleteEntryStmt, id)
 
 	entry, err := sq.scanEntry(row)
 
@@ -119,9 +121,7 @@ func (sq SQLiteSource) writeEntries(entries []*Entry) error {
 		return err
 	}
 
-	stmt, err := tx.Prepare(fmt.Sprintf(`INSERT INTO %s 
-			(reporting_name, reporting_root, directory, instruction, match, ignore, requestor, faculty) 
-			VALUES (?, ?, ?, ?, ?, ?, ?, ?)`, entriesTableName))
+	stmt, err := tx.Prepare(insertEntryStmt)
 	if err != nil {
 		return err
 	}

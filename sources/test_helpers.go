@@ -97,7 +97,7 @@ func convertCsvToSqlite(csvPath, sqlitePath string) error {
 	for i, e := range entries {
 		if e.Instruction != Backup && e.Instruction != NoBackup && e.Instruction != TempBackup {
 			fmt.Printf("Entry %d: %+v\n", i, e)
-			return errors.New("Wrong entry!")
+			return errors.New("wrong entry")
 		}
 	}
 
