@@ -110,7 +110,7 @@ func TestCreateTable(t *testing.T) {
 		tableNames = append(tableNames, tableName)
 	}
 
-	if ok, err := So(tableNames, ShouldContain, entriesTableName); !ok {
+	if ok, err := So(tableNames, ShouldContain, "entries"); !ok {
 		log.Fatal(err)
 	}
 }
