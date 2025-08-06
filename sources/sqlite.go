@@ -79,7 +79,9 @@ func (sq SQLiteSource) scanEntry(row scanner) (*Entry, error) {
 }
 
 func (sq SQLiteSource) GetEntry(id uint16) (*Entry, error) {
-	row := sq.db.QueryRow(fmt.Sprintf("SELECT * FROM %s WHERE id = ?", entriesTableName), id)
+	stmt := fmt.Sprintf("SELECT * FROM %s WHERE id = ?", entriesTableName)
+
+	row := sq.db.QueryRow(stmt, id)
 
 	entry, err := sq.scanEntry(row)
 
@@ -87,18 +89,28 @@ func (sq SQLiteSource) GetEntry(id uint16) (*Entry, error) {
 }
 
 func (sq SQLiteSource) UpdateEntry(newEntry *Entry) error {
-	//TODO implement me
-	panic("implement me")
+	stmt := fmt.Sprintf(`UPDATE %s SET 
+              reporting_name = ?, reporting_root = ?, directory = ?, instruction = ?, 
+              match = ?, ignore = ?, requestor = ?, faculty = ? WHERE id = ?`, entriesTableName)
+
+	_, err := sq.db.Exec(stmt, newEntry.ReportingName, newEntry.ReportingRoot, newEntry.Directory,
+		newEntry.Instruction, newEntry.Match, newEntry.Ignore, newEntry.Requestor, newEntry.Faculty, newEntry.ID)
+
+	return err
 }
 
 func (sq SQLiteSource) DeleteEntry(id uint16) (*Entry, error) {
-	//TODO implement me
-	panic("implement me")
+	stmt := fmt.Sprintf("DELETE FROM %s WHERE id = ? RETURNING *", entriesTableName)
+
+	row := sq.db.QueryRow(stmt, id)
+
+	entry, err := sq.scanEntry(row)
+
+	return entry, err
 }
 
 func (sq SQLiteSource) AddEntry(entry *Entry) error {
-	//TODO implement me
-	panic("implement me")
+	return sq.writeEntries([]*Entry{entry})
 }
 
 func (sq SQLiteSource) writeEntries(entries []*Entry) error {
