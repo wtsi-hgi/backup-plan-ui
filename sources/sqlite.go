@@ -137,6 +137,7 @@ func (sq SQLiteSource) WriteEntries(entries []*Entry) error {
 	if err != nil {
 		return err
 	}
+	defer tx.Rollback()
 
 	stmt, err := tx.Prepare(insertEntryStmt)
 	if err != nil {
@@ -145,11 +146,19 @@ func (sq SQLiteSource) WriteEntries(entries []*Entry) error {
 	defer stmt.Close()
 
 	for _, entry := range entries {
-		_, err = stmt.Exec(entry.ReportingName, entry.ReportingRoot, entry.Directory,
+		r, err := stmt.Exec(entry.ReportingName, entry.ReportingRoot, entry.Directory,
 			entry.Instruction, entry.Match, entry.Ignore, entry.Requestor, entry.Faculty)
+
 		if err != nil {
 			return err
 		}
+
+		id, err := r.LastInsertId()
+		if err != nil {
+			return err
+		}
+
+		entry.ID = uint16(id)
 	}
 
 	return tx.Commit()
