@@ -5,24 +5,33 @@ import (
 	"errors"
 	"fmt"
 
+	_ "github.com/go-sql-driver/mysql"
 	_ "github.com/mattn/go-sqlite3"
 )
 
-type SQLiteSource struct {
+type SQLSource struct {
 	db *sql.DB
 }
 
-var createTableStmt = fmt.Sprintf(`CREATE TABLE IF NOT EXISTS entries (
-	id INTEGER PRIMARY KEY AUTOINCREMENT,
+type SQLiteSource struct {
+	*SQLSource
+}
+
+type MySQLSource struct {
+	*SQLSource
+}
+
+const createTableTmpl = `CREATE TABLE IF NOT EXISTS %s (
+	id INTEGER PRIMARY KEY %s,
 	reporting_name TEXT,
 	reporting_root TEXT,
 	directory TEXT,
 	instruction TEXT CHECK ( instruction IN ('%s', '%s', '%s') ),
-	match TEXT,
-	ignore TEXT,
+	keep TEXT,
+	skip TEXT,
 	requestor TEXT,
 	faculty TEXT
-)`, Backup, NoBackup, TempBackup)
+)`
 
 const (
 	getAllStmt      = "SELECT * FROM entries"
@@ -30,31 +39,49 @@ const (
 	deleteEntryStmt = "DELETE FROM entries WHERE id = ? RETURNING *"
 	updateEntryStmt = `UPDATE entries 
 					   SET reporting_name = ?, reporting_root = ?, directory = ?, instruction = ?, 
-                       match = ?, ignore = ?, requestor = ?, faculty = ? WHERE id = ?`
+                       keep = ?, skip = ?, requestor = ?, faculty = ? WHERE id = ?`
 	insertEntryStmt = `INSERT INTO entries 
-			          (reporting_name, reporting_root, directory, instruction, match, ignore, requestor, faculty) 
+			          (reporting_name, reporting_root, directory, instruction, keep, skip, requestor, faculty) 
 			          VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
 )
 
-// NewSQLiteSource opens a connection and stores it internally.
-// You are responsible to close it using Close().
+// NewSQLiteSource opens a connection to an SQLite database at the given path and stores it internally.
+// You are responsible to close the connection using Close().
 func NewSQLiteSource(path string) (SQLiteSource, error) {
 	db, err := sql.Open("sqlite3", path)
 
-	return SQLiteSource{db: db}, err
+	return SQLiteSource{&SQLSource{db: db}}, err
 }
 
-func (sq SQLiteSource) Close() error {
+// NewMySQLSource opens a connection to a MySQL database using given credentials and stores it internally.
+// You are responsible to close the connection using Close().
+func NewMySQLSource(host, port, user, password, dbName string) (MySQLSource, error) {
+	address := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s", user, password, host, port, dbName)
+
+	db, err := sql.Open("mysql", address)
+
+	return MySQLSource{&SQLSource{db: db}}, err
+}
+
+func (sq SQLSource) Close() error {
 	return sq.db.Close()
 }
 
 func (sq SQLiteSource) CreateTable() error {
+	createTableStmt := fmt.Sprintf(createTableTmpl, "entries", "AUTOINCREMENT", Backup, NoBackup, TempBackup)
 	_, err := sq.db.Exec(createTableStmt)
 
 	return err
 }
 
-func (sq SQLiteSource) ReadAll() ([]*Entry, error) {
+func (sq MySQLSource) CreateTable(name string) error {
+	createTableStmt := fmt.Sprintf(createTableTmpl, name, "AUTO_INCREMENT", Backup, NoBackup, TempBackup)
+	_, err := sq.db.Exec(createTableStmt)
+
+	return err
+}
+
+func (sq SQLSource) ReadAll() ([]*Entry, error) {
 	rows, err := sq.db.Query(getAllStmt)
 	if err != nil {
 		return nil, err
@@ -80,7 +107,7 @@ type scanner interface {
 	Scan(dest ...any) error
 }
 
-func (sq SQLiteSource) scanEntry(row scanner) (*Entry, error) {
+func (sq SQLSource) scanEntry(row scanner) (*Entry, error) {
 	var entry Entry
 
 	err := row.Scan(&entry.ID, &entry.ReportingName, &entry.ReportingRoot, &entry.Directory,
@@ -89,7 +116,7 @@ func (sq SQLiteSource) scanEntry(row scanner) (*Entry, error) {
 	return &entry, err
 }
 
-func (sq SQLiteSource) GetEntry(id uint16) (*Entry, error) {
+func (sq SQLSource) GetEntry(id uint16) (*Entry, error) {
 	row := sq.db.QueryRow(getEntryStmt, id)
 
 	entry, err := sq.scanEntry(row)
@@ -97,7 +124,7 @@ func (sq SQLiteSource) GetEntry(id uint16) (*Entry, error) {
 	return entry, err
 }
 
-func (sq SQLiteSource) UpdateEntry(newEntry *Entry) error {
+func (sq SQLSource) UpdateEntry(newEntry *Entry) error {
 	r, err := sq.db.Exec(updateEntryStmt, newEntry.ReportingName, newEntry.ReportingRoot, newEntry.Directory,
 		newEntry.Instruction, newEntry.Match, newEntry.Ignore, newEntry.Requestor, newEntry.Faculty, newEntry.ID)
 
@@ -117,7 +144,7 @@ func (sq SQLiteSource) UpdateEntry(newEntry *Entry) error {
 	return nil
 }
 
-func (sq SQLiteSource) DeleteEntry(id uint16) (*Entry, error) {
+func (sq SQLSource) DeleteEntry(id uint16) (*Entry, error) {
 	row := sq.db.QueryRow(deleteEntryStmt, id)
 
 	entry, err := sq.scanEntry(row)
@@ -128,11 +155,11 @@ func (sq SQLiteSource) DeleteEntry(id uint16) (*Entry, error) {
 	return entry, err
 }
 
-func (sq SQLiteSource) AddEntry(entry *Entry) error {
+func (sq SQLSource) AddEntry(entry *Entry) error {
 	return sq.WriteEntries([]*Entry{entry})
 }
 
-func (sq SQLiteSource) WriteEntries(entries []*Entry) error {
+func (sq SQLSource) WriteEntries(entries []*Entry) error {
 	tx, err := sq.db.Begin()
 	if err != nil {
 		return err

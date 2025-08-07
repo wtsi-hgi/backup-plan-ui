@@ -2,6 +2,7 @@ package sources
 
 import (
 	"log"
+	"os"
 	"path/filepath"
 	"testing"
 
@@ -9,10 +10,22 @@ import (
 )
 
 func TestSQLiteSource_ReadAll(t *testing.T) {
-	entries, sq := createTestTable(t)
-	defer sq.Close()
+	testCases := []struct {
+		name string
+		src  func(t *testing.T) ([]*Entry, DataSource, func())
+	}{
+		{"Test SQLite", setupSQLiteSourceForTest},
+		{"Test MySQL", setupMySQLSourceForTest},
+	}
 
-	testDataSourceReadAll(t, sq, entries)
+	for _, tt := range testCases {
+		t.Run(tt.name, func(t *testing.T) {
+			entries, sq, cleanup := tt.src(t)
+			defer cleanup()
+
+			testDataSourceReadAll(t, sq, entries)
+		})
+	}
 }
 
 func TestSQLiteSource_GetEntry(t *testing.T) {
@@ -159,4 +172,59 @@ func createTestTable(t *testing.T) ([]*Entry, SQLiteSource) {
 	}
 
 	return entries, sq
+}
+
+func setupSQLiteSourceForTest(t *testing.T) ([]*Entry, DataSource, func()) {
+	t.Helper()
+
+	entries, sq := createTestTable(t)
+
+	return entries, sq, func() { sq.Close() }
+}
+
+func createTestMySQLTable(t *testing.T) ([]*Entry, MySQLSource, string) {
+	t.Helper()
+
+	entries := createTestEntries(t)
+	for _, entry := range entries {
+		entry.ID += 1
+	}
+
+	sq, err := NewMySQLSource(
+		os.Getenv("MYSQL_HOST"),
+		os.Getenv("MYSQL_PORT"),
+		os.Getenv("MYSQL_USER"),
+		os.Getenv("MYSQL_PASS"),
+		os.Getenv("MYSQL_DATABASE"),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	tableName := "entries_test"
+
+	err = sq.CreateTable(tableName)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = sq.WriteEntries(entries)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	return entries, sq, tableName
+}
+
+func setupMySQLSourceForTest(t *testing.T) ([]*Entry, DataSource, func()) {
+	t.Helper()
+
+	entries, sq, tableName := createTestMySQLTable(t)
+
+	cleanup := func() {
+		sq.db.Exec("DROP TABLE " + tableName)
+		sq.Close()
+	}
+
+	return entries, sq, cleanup
 }
