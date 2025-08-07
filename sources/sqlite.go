@@ -129,10 +129,10 @@ func (sq SQLiteSource) DeleteEntry(id uint16) (*Entry, error) {
 }
 
 func (sq SQLiteSource) AddEntry(entry *Entry) error {
-	return sq.writeEntries([]*Entry{entry})
+	return sq.WriteEntries([]*Entry{entry})
 }
 
-func (sq SQLiteSource) writeEntries(entries []*Entry) error {
+func (sq SQLiteSource) WriteEntries(entries []*Entry) error {
 	tx, err := sq.db.Begin()
 	if err != nil {
 		return err
