@@ -123,3 +123,33 @@ func TestCreateTable(t *testing.T) {
 		log.Fatal(err)
 	}
 }
+
+// createTestTable initialises a test SQLite database, creates a table, inserts test entries, and returns them and
+// SQLite source. You should close the database connection with sq.Close() once it no longer needed.
+func createTestTable(t *testing.T) ([]*Entry, SQLiteSource) {
+	t.Helper()
+
+	entries := CreateTestEntries(t)
+	for _, entry := range entries {
+		entry.ID += 1
+	}
+
+	dbFile := filepath.Join(t.TempDir(), "test.db")
+
+	sq, err := NewSQLiteSource(dbFile)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = sq.CreateTable()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = sq.writeEntries(entries)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	return entries, sq
+}
