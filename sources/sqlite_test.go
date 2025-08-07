@@ -66,7 +66,7 @@ func TestSQLiteSource_AddEntry(t *testing.T) {
 }
 
 func TestSQLiteSource_WriteEntries(t *testing.T) {
-	entries := CreateTestEntries(t)
+	entries := createTestEntries(t)
 
 	dbPath := filepath.Join(t.TempDir(), "test.db")
 
@@ -81,7 +81,7 @@ func TestSQLiteSource_WriteEntries(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	err = sq.writeEntries(entries)
+	err = sq.WriteEntries(entries)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -129,7 +129,7 @@ func TestCreateTable(t *testing.T) {
 func createTestTable(t *testing.T) ([]*Entry, SQLiteSource) {
 	t.Helper()
 
-	entries := CreateTestEntries(t)
+	entries := createTestEntries(t)
 	for _, entry := range entries {
 		entry.ID += 1
 	}
@@ -146,7 +146,7 @@ func createTestTable(t *testing.T) ([]*Entry, SQLiteSource) {
 		t.Fatal(err)
 	}
 
-	err = sq.writeEntries(entries)
+	err = sq.WriteEntries(entries)
 	if err != nil {
 		t.Fatal(err)
 	}

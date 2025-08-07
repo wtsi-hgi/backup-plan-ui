@@ -138,13 +138,3 @@ func testDataSourceAddEntry(t *testing.T, ds DataSource, originalEntries []*Entr
 		t.Error(err)
 	}
 }
-
-func TestConvert(t *testing.T) {
-	csvPath := "../data/plan.csv"
-	sqlitePath := "../data/plan.sqlite"
-
-	err := convertCsvToSqlite(csvPath, sqlitePath)
-	if err != nil {
-		t.Fatal(err)
-	}
-}
