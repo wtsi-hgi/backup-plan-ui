@@ -85,6 +85,13 @@ func TestSQLiteSource_WriteEntries(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+
+	for i, entry := range entries {
+		ok, err := So(entry.ID, ShouldEqual, uint16(i+1))
+		if !ok {
+			t.Error(err)
+		}
+	}
 }
 
 func TestCreateTable(t *testing.T) {
