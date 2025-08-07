@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"path/filepath"
 	"testing"
 
 	"github.com/gocarina/gocsv"
@@ -57,34 +56,6 @@ func CreateTestCSV(t *testing.T) ([]*Entry, string) {
 	}
 
 	return entries, file.Name()
-}
-
-func createTestTable(t *testing.T) ([]*Entry, SQLiteSource) {
-	t.Helper()
-
-	entries := CreateTestEntries(t)
-	for _, entry := range entries {
-		entry.ID += 1
-	}
-
-	dbFile := filepath.Join(t.TempDir(), "test.db")
-
-	sq, err := NewSQLiteSource(dbFile)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	err = sq.CreateTable()
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	err = sq.writeEntries(entries)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	return entries, sq
 }
 
 func convertCsvToSqlite(csvPath, sqlitePath string) error {
