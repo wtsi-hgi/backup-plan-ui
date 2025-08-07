@@ -12,7 +12,7 @@ import (
 
 const NumTestDataRows = 3
 
-func CreateTestData(t *testing.T) ([]*Entry, string) {
+func createTestEntries(t *testing.T) []*Entry {
 	t.Helper()
 
 	baseEntry := Entry{
@@ -33,6 +33,14 @@ func CreateTestData(t *testing.T) ([]*Entry, string) {
 
 		entries[i] = &newEntry
 	}
+
+	return entries
+}
+
+func CreateTestCSV(t *testing.T) ([]*Entry, string) {
+	t.Helper()
+
+	entries := createTestEntries(t)
 
 	file, err := os.CreateTemp(t.TempDir(), "*.csv")
 	if err != nil {
