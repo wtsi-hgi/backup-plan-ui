@@ -43,7 +43,7 @@ func TestGetEntries(t *testing.T) {
 	body := getBodyAndCheckStatusOK(t, w)
 
 	for _, entry := range originalEntries {
-		if ok, err := So(string(body), ShouldContainSubstring, entry.ReportingName); !ok {
+		if ok, err := So(body, ShouldContainSubstring, entry.ReportingName); !ok {
 			t.Error(err)
 		}
 	}
@@ -359,7 +359,7 @@ func createFormFromEntry(entry sources.Entry) url.Values {
 func createServer(t *testing.T) (Server, []*sources.Entry) {
 	t.Helper()
 
-	entries, dbPath := sources.CreateTestData(t)
+	entries, dbPath := sources.CreateTestCSV(t)
 
 	templates, err := template.ParseGlob(filepath.Join("..", templatesDir, "*.html"))
 	if err != nil {
