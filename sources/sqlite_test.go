@@ -9,37 +9,48 @@ import (
 	. "github.com/smarty/assertions"
 )
 
-func TestSQLiteSource_ReadAll(t *testing.T) {
-	testCases := []struct {
-		name string
-		src  func(t *testing.T) ([]*Entry, DataSource, func())
-	}{
-		{"Test SQLite", setupSQLiteSourceForTest},
-		{"Test MySQL", setupMySQLSourceForTest},
-	}
+var sqlTestCases = []struct {
+	name string
+	src  func(t *testing.T) ([]*Entry, DataSource, func())
+}{
+	{"SQLite", setupSQLiteSourceForTest},
+	{"MySQL", setupMySQLSourceForTest},
+}
 
-	for _, tt := range testCases {
+func TestSQLSource_ReadAll(t *testing.T) {
+	for _, tt := range sqlTestCases {
 		t.Run(tt.name, func(t *testing.T) {
 			entries, sq, cleanup := tt.src(t)
-			defer cleanup()
+
+			t.Cleanup(cleanup)
 
 			testDataSourceReadAll(t, sq, entries)
 		})
 	}
 }
 
-func TestSQLiteSource_GetEntry(t *testing.T) {
-	entries, sq := createTestTable(t)
-	defer sq.Close()
+func TestSQLSource_GetEntry(t *testing.T) {
+	for _, tt := range sqlTestCases {
+		t.Run(tt.name, func(t *testing.T) {
+			entries, sq, cleanup := tt.src(t)
 
-	testDataSourceGetEntry(t, sq, entries)
+			t.Cleanup(cleanup)
+
+			testDataSourceGetEntry(t, sq, entries)
+		})
+	}
 }
 
-func TestSQLiteSource_UpdateEntry(t *testing.T) {
-	entries, sq := createTestTable(t)
-	defer sq.Close()
+func TestSQLSource_UpdateEntry(t *testing.T) {
+	for _, tt := range sqlTestCases {
+		t.Run(tt.name, func(t *testing.T) {
+			entries, sq, cleanup := tt.src(t)
 
-	testDataSourceUpdateEntry(t, sq, entries)
+			t.Cleanup(cleanup)
+
+			testDataSourceUpdateEntry(t, sq, entries)
+		})
+	}
 }
 
 func TestSQLiteSource_DeleteEntry(t *testing.T) {
@@ -54,19 +65,25 @@ func TestSQLiteSource_DeleteEntry(t *testing.T) {
 		{"Delete non-existing entry", NumTestDataRows + 100, ErrNoEntry},
 	}
 
-	for _, tt := range testCases {
-		t.Run(tt.name, func(t *testing.T) {
-			entries, sq := createTestTable(t)
-			defer sq.Close()
+	for _, sqlTest := range sqlTestCases {
+		t.Run(sqlTest.name, func(t *testing.T) {
 
-			var e *Entry
-			if tt.entryID > NumTestDataRows {
-				e = nil
-			} else {
-				e = entries[tt.entryID-1]
+			for _, tt := range testCases {
+				t.Run(tt.name, func(t *testing.T) {
+					entries, sq, cleanup := sqlTest.src(t)
+
+					t.Cleanup(cleanup)
+
+					var e *Entry
+					if tt.entryID > NumTestDataRows {
+						e = nil
+					} else {
+						e = entries[tt.entryID-1]
+					}
+
+					testDataSourceDeleteEntry(t, sq, e, tt.entryID, tt.wantErr)
+				})
 			}
-
-			testDataSourceDeleteEntry(t, sq, e, tt.entryID, tt.wantErr)
 		})
 	}
 }
@@ -179,7 +196,14 @@ func setupSQLiteSourceForTest(t *testing.T) ([]*Entry, DataSource, func()) {
 
 	entries, sq := createTestTable(t)
 
-	return entries, sq, func() { sq.Close() }
+	cleanup := func() {
+		err := sq.Close()
+		if err != nil {
+			t.Log("Failed to close MySQL connection:", err)
+		}
+	}
+
+	return entries, sq, cleanup
 }
 
 func createTestMySQLTable(t *testing.T) ([]*Entry, MySQLSource, string) {
@@ -190,20 +214,21 @@ func createTestMySQLTable(t *testing.T) ([]*Entry, MySQLSource, string) {
 		entry.ID += 1
 	}
 
+	tableName := "entries_test"
+
 	sq, err := NewMySQLSource(
 		os.Getenv("MYSQL_HOST"),
 		os.Getenv("MYSQL_PORT"),
 		os.Getenv("MYSQL_USER"),
 		os.Getenv("MYSQL_PASS"),
 		os.Getenv("MYSQL_DATABASE"),
+		tableName,
 	)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	tableName := "entries_test"
-
-	err = sq.CreateTable(tableName)
+	err = sq.CreateTable()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -222,8 +247,15 @@ func setupMySQLSourceForTest(t *testing.T) ([]*Entry, DataSource, func()) {
 	entries, sq, tableName := createTestMySQLTable(t)
 
 	cleanup := func() {
-		sq.db.Exec("DROP TABLE " + tableName)
-		sq.Close()
+		_, err := sq.db.Exec("DROP TABLE " + tableName)
+		if err != nil {
+			t.Logf("Failed to drop table %s: %v\n", tableName, err)
+		}
+
+		err = sq.Close()
+		if err != nil {
+			t.Log("Failed to close MySQL connection:", err)
+		}
 	}
 
 	return entries, sq, cleanup

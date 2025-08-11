@@ -10,7 +10,8 @@ import (
 )
 
 type SQLSource struct {
-	db *sql.DB
+	db        *sql.DB
+	tableName string
 }
 
 type SQLiteSource struct {
@@ -20,6 +21,8 @@ type SQLiteSource struct {
 type MySQLSource struct {
 	*SQLSource
 }
+
+const defaultTableName = "entries"
 
 const createTableTmpl = `CREATE TABLE IF NOT EXISTS %s (
 	id INTEGER PRIMARY KEY %s,
@@ -34,13 +37,14 @@ const createTableTmpl = `CREATE TABLE IF NOT EXISTS %s (
 )`
 
 const (
-	getAllStmt      = "SELECT * FROM entries"
-	getEntryStmt    = "SELECT * FROM entries WHERE id = ?"
-	deleteEntryStmt = "DELETE FROM entries WHERE id = ? RETURNING *"
-	updateEntryStmt = `UPDATE entries 
+	getAllStmt          = "SELECT * FROM %s"
+	getEntryStmt        = "SELECT * FROM %s WHERE id = ?"
+	deleteEntryStmt     = "DELETE FROM %s WHERE id = ?"
+	deleteReturningStmt = "DELETE FROM %s WHERE id = ? RETURNING *"
+	updateEntryStmt     = `UPDATE %s 
 					   SET reporting_name = ?, reporting_root = ?, directory = ?, instruction = ?, 
                        keep = ?, skip = ?, requestor = ?, faculty = ? WHERE id = ?`
-	insertEntryStmt = `INSERT INTO entries 
+	insertEntryStmt = `INSERT INTO %s 
 			          (reporting_name, reporting_root, directory, instruction, keep, skip, requestor, faculty) 
 			          VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
 )
@@ -50,17 +54,17 @@ const (
 func NewSQLiteSource(path string) (SQLiteSource, error) {
 	db, err := sql.Open("sqlite3", path)
 
-	return SQLiteSource{&SQLSource{db: db}}, err
+	return SQLiteSource{&SQLSource{db: db, tableName: defaultTableName}}, err
 }
 
 // NewMySQLSource opens a connection to a MySQL database using given credentials and stores it internally.
 // You are responsible to close the connection using Close().
-func NewMySQLSource(host, port, user, password, dbName string) (MySQLSource, error) {
+func NewMySQLSource(host, port, user, password, dbName, tableName string) (MySQLSource, error) {
 	address := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s", user, password, host, port, dbName)
 
 	db, err := sql.Open("mysql", address)
 
-	return MySQLSource{&SQLSource{db: db}}, err
+	return MySQLSource{&SQLSource{db: db, tableName: tableName}}, err
 }
 
 func (sq SQLSource) Close() error {
@@ -68,21 +72,21 @@ func (sq SQLSource) Close() error {
 }
 
 func (sq SQLiteSource) CreateTable() error {
-	createTableStmt := fmt.Sprintf(createTableTmpl, "entries", "AUTOINCREMENT", Backup, NoBackup, TempBackup)
+	createTableStmt := fmt.Sprintf(createTableTmpl, sq.tableName, "AUTOINCREMENT", Backup, NoBackup, TempBackup)
 	_, err := sq.db.Exec(createTableStmt)
 
 	return err
 }
 
-func (sq MySQLSource) CreateTable(name string) error {
-	createTableStmt := fmt.Sprintf(createTableTmpl, name, "AUTO_INCREMENT", Backup, NoBackup, TempBackup)
+func (sq MySQLSource) CreateTable() error {
+	createTableStmt := fmt.Sprintf(createTableTmpl, sq.tableName, "AUTO_INCREMENT", Backup, NoBackup, TempBackup)
 	_, err := sq.db.Exec(createTableStmt)
 
 	return err
 }
 
 func (sq SQLSource) ReadAll() ([]*Entry, error) {
-	rows, err := sq.db.Query(getAllStmt)
+	rows, err := sq.db.Query(fmt.Sprintf(getAllStmt, sq.tableName))
 	if err != nil {
 		return nil, err
 	}
@@ -117,7 +121,9 @@ func (sq SQLSource) scanEntry(row scanner) (*Entry, error) {
 }
 
 func (sq SQLSource) GetEntry(id uint16) (*Entry, error) {
-	row := sq.db.QueryRow(getEntryStmt, id)
+	stmt := fmt.Sprintf(getEntryStmt, sq.tableName)
+
+	row := sq.db.QueryRow(fmt.Sprintf(stmt, sq.tableName), id)
 
 	entry, err := sq.scanEntry(row)
 
@@ -125,7 +131,9 @@ func (sq SQLSource) GetEntry(id uint16) (*Entry, error) {
 }
 
 func (sq SQLSource) UpdateEntry(newEntry *Entry) error {
-	r, err := sq.db.Exec(updateEntryStmt, newEntry.ReportingName, newEntry.ReportingRoot, newEntry.Directory,
+	stmt := fmt.Sprintf(updateEntryStmt, sq.tableName)
+
+	r, err := sq.db.Exec(stmt, newEntry.ReportingName, newEntry.ReportingRoot, newEntry.Directory,
 		newEntry.Instruction, newEntry.Match, newEntry.Ignore, newEntry.Requestor, newEntry.Faculty, newEntry.ID)
 
 	if err != nil {
@@ -144,8 +152,10 @@ func (sq SQLSource) UpdateEntry(newEntry *Entry) error {
 	return nil
 }
 
-func (sq SQLSource) DeleteEntry(id uint16) (*Entry, error) {
-	row := sq.db.QueryRow(deleteEntryStmt, id)
+func (sq SQLiteSource) DeleteEntry(id uint16) (*Entry, error) {
+	stmt := fmt.Sprintf(deleteReturningStmt, sq.tableName)
+
+	row := sq.db.QueryRow(stmt, id)
 
 	entry, err := sq.scanEntry(row)
 	if err != nil && errors.Is(err, sql.ErrNoRows) {
@@ -153,6 +163,35 @@ func (sq SQLSource) DeleteEntry(id uint16) (*Entry, error) {
 	}
 
 	return entry, err
+}
+
+func (sq MySQLSource) DeleteEntry(id uint16) (*Entry, error) {
+	tx, err := sq.db.Begin()
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback()
+
+	getStmt := fmt.Sprintf(getEntryStmt, sq.tableName)
+	row := tx.QueryRow(getStmt, id)
+
+	entry, err := sq.scanEntry(row)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, ErrNoEntry
+		}
+
+		return nil, err
+	}
+
+	delStmt := fmt.Sprintf(deleteEntryStmt, sq.tableName)
+
+	_, err = tx.Exec(delStmt, id)
+	if err != nil {
+		return nil, err
+	}
+
+	return entry, tx.Commit()
 }
 
 func (sq SQLSource) AddEntry(entry *Entry) error {
@@ -166,7 +205,7 @@ func (sq SQLSource) WriteEntries(entries []*Entry) error {
 	}
 	defer tx.Rollback()
 
-	stmt, err := tx.Prepare(insertEntryStmt)
+	stmt, err := tx.Prepare(fmt.Sprintf(insertEntryStmt, sq.tableName))
 	if err != nil {
 		return err
 	}
