@@ -1,6 +1,7 @@
 package sources
 
 import (
+	"database/sql"
 	"log"
 	"os"
 	"path/filepath"
@@ -11,7 +12,7 @@ import (
 
 var sqlTestCases = []struct {
 	name string
-	src  func(t *testing.T) ([]*Entry, DataSource, func())
+	src  func(t *testing.T) ([]*Entry, DataSource)
 }{
 	{"SQLite", setupSQLiteSourceForTest},
 	{"MySQL", setupMySQLSourceForTest},
@@ -20,9 +21,7 @@ var sqlTestCases = []struct {
 func TestSQLSource_ReadAll(t *testing.T) {
 	for _, tt := range sqlTestCases {
 		t.Run(tt.name, func(t *testing.T) {
-			entries, sq, cleanup := tt.src(t)
-
-			t.Cleanup(cleanup)
+			entries, sq := tt.src(t)
 
 			testDataSourceReadAll(t, sq, entries)
 		})
@@ -32,9 +31,7 @@ func TestSQLSource_ReadAll(t *testing.T) {
 func TestSQLSource_GetEntry(t *testing.T) {
 	for _, tt := range sqlTestCases {
 		t.Run(tt.name, func(t *testing.T) {
-			entries, sq, cleanup := tt.src(t)
-
-			t.Cleanup(cleanup)
+			entries, sq := tt.src(t)
 
 			testDataSourceGetEntry(t, sq, entries)
 		})
@@ -44,16 +41,14 @@ func TestSQLSource_GetEntry(t *testing.T) {
 func TestSQLSource_UpdateEntry(t *testing.T) {
 	for _, tt := range sqlTestCases {
 		t.Run(tt.name, func(t *testing.T) {
-			entries, sq, cleanup := tt.src(t)
-
-			t.Cleanup(cleanup)
+			entries, sq := tt.src(t)
 
 			testDataSourceUpdateEntry(t, sq, entries)
 		})
 	}
 }
 
-func TestSQLiteSource_DeleteEntry(t *testing.T) {
+func TestSQLSource_DeleteEntry(t *testing.T) {
 	testCases := []struct {
 		name    string
 		entryID uint16
@@ -70,9 +65,7 @@ func TestSQLiteSource_DeleteEntry(t *testing.T) {
 
 			for _, tt := range testCases {
 				t.Run(tt.name, func(t *testing.T) {
-					entries, sq, cleanup := sqlTest.src(t)
-
-					t.Cleanup(cleanup)
+					entries, sq := sqlTest.src(t)
 
 					var e *Entry
 					if tt.entryID > NumTestDataRows {
@@ -88,11 +81,14 @@ func TestSQLiteSource_DeleteEntry(t *testing.T) {
 	}
 }
 
-func TestSQLiteSource_AddEntry(t *testing.T) {
-	entries, sq := createTestTable(t)
-	defer sq.Close()
+func TestSQLSource_AddEntry(t *testing.T) {
+	for _, sqlTest := range sqlTestCases {
+		t.Run(sqlTest.name, func(t *testing.T) {
+			entries, sq := sqlTest.src(t)
 
-	testDataSourceAddEntry(t, sq, entries)
+			testDataSourceAddEntry(t, sq, entries)
+		})
+	}
 }
 
 func TestSQLiteSource_WriteEntries(t *testing.T) {
@@ -104,7 +100,7 @@ func TestSQLiteSource_WriteEntries(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer sq.Close()
+	defer callAndLogError(t, sq.Close)
 
 	err = sq.CreateTable()
 	if err != nil {
@@ -124,25 +120,71 @@ func TestSQLiteSource_WriteEntries(t *testing.T) {
 	}
 }
 
-func TestCreateTable(t *testing.T) {
+func TestMySQLSource_WriteEntries(t *testing.T) {
+	tableName := "entries_test"
+
+	sq, err := NewMySQLSource(
+		os.Getenv("MYSQL_HOST"),
+		os.Getenv("MYSQL_PORT"),
+		os.Getenv("MYSQL_USER"),
+		os.Getenv("MYSQL_PASS"),
+		os.Getenv("MYSQL_DATABASE"),
+		tableName,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer callAndLogError(t, sq.Close)
+
+	err = sq.CreateTable()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer cleanupMySQL(t, sq, tableName)
+
+	entries := createTestEntries(t)
+
+	err = sq.WriteEntries(entries)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	for i, entry := range entries {
+		ok, err := So(entry.ID, ShouldEqual, uint16(i+1))
+		if !ok {
+			t.Error(err)
+		}
+	}
+}
+
+func TestSQLiteSource_CreateTable(t *testing.T) {
 	dbFile := filepath.Join(t.TempDir(), "test.db")
 
 	sq, err := NewSQLiteSource(dbFile)
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer sq.Close()
+	defer callAndLogError(t, sq.Close)
 
 	err = sq.CreateTable()
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	rows, err := sq.db.Query("SELECT name FROM sqlite_master WHERE type='table' ORDER BY name;")
+	stmt := "SELECT name FROM sqlite_master WHERE type='table' ORDER BY name;"
+	tableNames := scanTableNames(t, sq.db, stmt)
+
+	if ok, err := So(tableNames, ShouldContain, defaultTableName); !ok {
+		log.Fatal(err)
+	}
+}
+
+func scanTableNames(t *testing.T, db *sql.DB, stmt string) []string {
+	rows, err := db.Query(stmt)
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer rows.Close()
+	defer callAndLogError(t, rows.Close)
 
 	var tableName string
 	var tableNames []string
@@ -156,14 +198,41 @@ func TestCreateTable(t *testing.T) {
 		tableNames = append(tableNames, tableName)
 	}
 
-	if ok, err := So(tableNames, ShouldContain, "entries"); !ok {
+	return tableNames
+}
+
+func TestMySQLSource_CreateTable(t *testing.T) {
+	tableName := "test_create_table"
+
+	sq, err := NewMySQLSource(
+		os.Getenv("MYSQL_HOST"),
+		os.Getenv("MYSQL_PORT"),
+		os.Getenv("MYSQL_USER"),
+		os.Getenv("MYSQL_PASS"),
+		os.Getenv("MYSQL_DATABASE"),
+		tableName,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer callAndLogError(t, sq.Close)
+
+	err = sq.CreateTable()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer cleanupMySQL(t, sq, tableName)
+
+	tableNames := scanTableNames(t, sq.db, "SHOW TABLES")
+
+	if ok, err := So(tableNames, ShouldContain, tableName); !ok {
 		log.Fatal(err)
 	}
 }
 
-// createTestTable initialises a test SQLite database, creates a table, inserts test entries, and returns them and
+// createTestSQLiteTable initialises a test SQLite database, creates a table, inserts test entries, and returns them and
 // SQLite source. You should close the database connection with sq.Close() once it no longer needed.
-func createTestTable(t *testing.T) ([]*Entry, SQLiteSource) {
+func createTestSQLiteTable(t *testing.T) ([]*Entry, SQLiteSource) {
 	t.Helper()
 
 	entries := createTestEntries(t)
@@ -191,21 +260,22 @@ func createTestTable(t *testing.T) ([]*Entry, SQLiteSource) {
 	return entries, sq
 }
 
-func setupSQLiteSourceForTest(t *testing.T) ([]*Entry, DataSource, func()) {
+func setupSQLiteSourceForTest(t *testing.T) ([]*Entry, DataSource) {
 	t.Helper()
 
-	entries, sq := createTestTable(t)
+	entries, sq := createTestSQLiteTable(t)
 
 	cleanup := func() {
-		err := sq.Close()
-		if err != nil {
-			t.Log("Failed to close MySQL connection:", err)
-		}
+		callAndLogError(t, sq.Close)
 	}
 
-	return entries, sq, cleanup
+	t.Cleanup(cleanup)
+
+	return entries, sq
 }
 
+// createTestMySQLTable initialises a connection to a MySQL database, creates a table, inserts test entries, and
+// returns them and MySQL source. You should close the database connection with sq.Close() once it no longer needed.
 func createTestMySQLTable(t *testing.T) ([]*Entry, MySQLSource, string) {
 	t.Helper()
 
@@ -241,22 +311,34 @@ func createTestMySQLTable(t *testing.T) ([]*Entry, MySQLSource, string) {
 	return entries, sq, tableName
 }
 
-func setupMySQLSourceForTest(t *testing.T) ([]*Entry, DataSource, func()) {
+func setupMySQLSourceForTest(t *testing.T) ([]*Entry, DataSource) {
 	t.Helper()
 
 	entries, sq, tableName := createTestMySQLTable(t)
 
 	cleanup := func() {
-		_, err := sq.db.Exec("DROP TABLE " + tableName)
-		if err != nil {
-			t.Logf("Failed to drop table %s: %v\n", tableName, err)
-		}
-
-		err = sq.Close()
-		if err != nil {
-			t.Log("Failed to close MySQL connection:", err)
-		}
+		cleanupMySQL(t, sq, tableName)
 	}
 
-	return entries, sq, cleanup
+	t.Cleanup(cleanup)
+
+	return entries, sq
+}
+
+func cleanupMySQL(t *testing.T, sq MySQLSource, tableName string) {
+	_, err := sq.db.Exec("DROP TABLE " + tableName)
+	if err != nil {
+		t.Logf("Failed to drop table %s: %v\n", tableName, err)
+	}
+
+	callAndLogError(t, sq.Close)
+}
+
+func callAndLogError(t *testing.T, f func() error) {
+	t.Helper()
+
+	err := f()
+	if err != nil {
+		t.Log(err)
+	}
 }

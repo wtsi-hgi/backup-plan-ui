@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"log/slog"
 
 	_ "github.com/go-sql-driver/mysql"
 	_ "github.com/mattn/go-sqlite3"
@@ -49,6 +50,13 @@ const (
 			          VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
 )
 
+func (sq SQLSource) callAndLogError(f func() error) {
+	err := f()
+	if err != nil {
+		slog.Error(err.Error())
+	}
+}
+
 // NewSQLiteSource opens a connection to an SQLite database at the given path and stores it internally.
 // You are responsible to close the connection using Close().
 func NewSQLiteSource(path string) (SQLiteSource, error) {
@@ -91,7 +99,7 @@ func (sq SQLSource) ReadAll() ([]*Entry, error) {
 		return nil, err
 	}
 
-	defer rows.Close()
+	defer sq.callAndLogError(rows.Close)
 
 	var entries []*Entry
 
@@ -123,7 +131,7 @@ func (sq SQLSource) scanEntry(row scanner) (*Entry, error) {
 func (sq SQLSource) GetEntry(id uint16) (*Entry, error) {
 	stmt := fmt.Sprintf(getEntryStmt, sq.tableName)
 
-	row := sq.db.QueryRow(fmt.Sprintf(stmt, sq.tableName), id)
+	row := sq.db.QueryRow(stmt, id)
 
 	entry, err := sq.scanEntry(row)
 
@@ -170,7 +178,14 @@ func (sq MySQLSource) DeleteEntry(id uint16) (*Entry, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer tx.Rollback()
+
+	defer func() {
+		if err != nil {
+			sq.callAndLogError(tx.Rollback)
+		} else {
+			err = tx.Commit()
+		}
+	}()
 
 	getStmt := fmt.Sprintf(getEntryStmt, sq.tableName)
 	row := tx.QueryRow(getStmt, id)
@@ -191,7 +206,7 @@ func (sq MySQLSource) DeleteEntry(id uint16) (*Entry, error) {
 		return nil, err
 	}
 
-	return entry, tx.Commit()
+	return entry, err
 }
 
 func (sq SQLSource) AddEntry(entry *Entry) error {
@@ -203,13 +218,20 @@ func (sq SQLSource) WriteEntries(entries []*Entry) error {
 	if err != nil {
 		return err
 	}
-	defer tx.Rollback()
+
+	defer func() {
+		if err != nil {
+			sq.callAndLogError(tx.Rollback)
+		} else {
+			err = tx.Commit()
+		}
+	}()
 
 	stmt, err := tx.Prepare(fmt.Sprintf(insertEntryStmt, sq.tableName))
 	if err != nil {
 		return err
 	}
-	defer stmt.Close()
+	defer sq.callAndLogError(stmt.Close)
 
 	for _, entry := range entries {
 		r, err := stmt.Exec(entry.ReportingName, entry.ReportingRoot, entry.Directory,
@@ -227,5 +249,5 @@ func (sq SQLSource) WriteEntries(entries []*Entry) error {
 		entry.ID = uint16(id)
 	}
 
-	return tx.Commit()
+	return err
 }
