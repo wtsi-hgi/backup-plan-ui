@@ -1,8 +1,9 @@
-package internal
+package converter
 
 import (
 	"errors"
 	"fmt"
+	"log/slog"
 
 	. "backup-plan-ui/sources"
 )
@@ -26,7 +27,12 @@ func ConvertCsvToSqlite(csvPath, sqlitePath string) error {
 		return err
 	}
 
-	defer sq.Close()
+	defer func() {
+		err = sq.Close()
+		if err != nil {
+			slog.Error("Failed to close SQLite connection: " + err.Error())
+		}
+	}()
 
 	err = sq.CreateTable()
 	if err != nil {

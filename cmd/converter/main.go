@@ -6,7 +6,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"backup-plan-ui/internal"
+	"backup-plan-ui/converter"
 )
 
 func main() {
@@ -18,7 +18,7 @@ func main() {
 	csvPath := os.Args[1]
 	sqlitePath := os.Args[2]
 
-	err := internal.ConvertCsvToSqlite(csvPath, sqlitePath)
+	err := converter.ConvertCsvToSqlite(csvPath, sqlitePath)
 	if err != nil {
 		log.Fatalf("Conversion failed: %v", err)
 	}
