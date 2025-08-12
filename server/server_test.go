@@ -361,7 +361,15 @@ func createServer(t *testing.T) (Server, []*sources.Entry) {
 
 	entries, dbPath := sources.CreateTestCSV(t)
 
-	templates, err := template.ParseGlob(filepath.Join("..", templatesDir, "*.html"))
+	funcMap := template.FuncMap{
+		"ShortenPath":  ShortenPath,
+		"RemovePrefix": RemovePrefix,
+	}
+
+	templates, err := template.New("").
+		Funcs(funcMap).
+		ParseGlob(filepath.Join("..", templatesDir, "*.html"))
+
 	if err != nil {
 		t.Fatal(err)
 	}
