@@ -4,12 +4,10 @@ import (
 	"backup-plan-ui/server"
 	"backup-plan-ui/sources"
 	"embed"
-	"fmt"
 	"log"
 	"log/slog"
 	"net/http"
 	"os"
-	"path/filepath"
 
 	"github.com/go-chi/chi/v5"
 )
@@ -21,21 +19,20 @@ var staticFiles embed.FS
 var templateFiles embed.FS
 
 func main() {
-	if len(os.Args) != 2 {
-		fmt.Printf("Usage: %s <path-to-csv>\n", filepath.Base(os.Args[0]))
-		os.Exit(1)
-	}
-
 	log.SetFlags(0) // timestamp comes from systemd
 
-	dbPath, err := filepath.Abs(os.Args[1])
-	if err != nil {
-		log.Fatal(err)
-	}
+	db, err := sources.NewMySQLSource(
+		os.Getenv("MYSQL_HOST"),
+		os.Getenv("MYSQL_PORT"),
+		os.Getenv("MYSQL_USER"),
+		os.Getenv("MYSQL_PASS"),
+		os.Getenv("MYSQL_DATABASE"),
+		sources.DefaultTableName,
+	)
 
-	slog.Info("Using database: " + dbPath)
+	slog.Info("Using MySQL database: " + sources.DefaultTableName)
 
-	srv, err := server.NewServer(sources.CSVSource{Path: dbPath}, templateFiles)
+	srv, err := server.NewServer(db, templateFiles)
 	if err != nil {
 		log.Fatal(err)
 	}

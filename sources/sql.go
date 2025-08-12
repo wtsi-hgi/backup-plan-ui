@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"log"
 	"log/slog"
 
 	_ "github.com/go-sql-driver/mysql"
@@ -68,6 +69,26 @@ func NewSQLiteSource(path string) (SQLiteSource, error) {
 // NewMySQLSource opens a connection to a MySQL database using given credentials and stores it internally.
 // You are responsible to close the connection using Close().
 func NewMySQLSource(host, port, user, password, dbName, tableName string) (MySQLSource, error) {
+	var missing []string
+	if host == "" {
+		missing = append(missing, "host")
+	}
+	if port == "" {
+		missing = append(missing, "port")
+	}
+	if user == "" {
+		missing = append(missing, "user")
+	}
+	if password == "" {
+		missing = append(missing, "password")
+	}
+	if dbName == "" {
+		missing = append(missing, "dbName")
+	}
+	if len(missing) > 0 {
+		log.Fatalf("Missing required arguments: %v\n", missing)
+	}
+
 	address := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s", user, password, host, port, dbName)
 
 	db, err := sql.Open("mysql", address)

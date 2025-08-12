@@ -56,26 +56,6 @@ func main() {
 		pass := os.Getenv("MYSQL_PASS")
 		db := os.Getenv("MYSQL_DATABASE")
 
-		var missing []string
-		if host == "" {
-			missing = append(missing, "MYSQL_HOST")
-		}
-		if port == "" {
-			missing = append(missing, "MYSQL_PORT")
-		}
-		if user == "" {
-			missing = append(missing, "MYSQL_USER")
-		}
-		if pass == "" {
-			missing = append(missing, "MYSQL_PASS")
-		}
-		if db == "" {
-			missing = append(missing, "MYSQL_DATABASE")
-		}
-		if len(missing) > 0 {
-			log.Fatalf("Missing required environment variables: %v\n", missing)
-		}
-
 		if err := converter.ConvertCsvToMySQL(csvPath, host, port, user, pass, db, tableName); err != nil {
 			log.Fatalf("Conversion failed: %v", err)
 		}
