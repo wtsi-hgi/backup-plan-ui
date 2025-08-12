@@ -8,7 +8,9 @@ import (
 	"log/slog"
 	"net/http"
 	"path/filepath"
+	"slices"
 	"strconv"
+	"strings"
 
 	"github.com/go-chi/chi/v5"
 )
@@ -18,10 +20,20 @@ type Server struct {
 	templates *template.Template
 }
 
-const templatesDir = "templates"
+const (
+	templatesDir      = "templates"
+	maxPathCharacters = 50
+)
 
 func NewServer(db sources.DataSource, fs embed.FS) (*Server, error) {
-	t, err := template.ParseFS(fs, filepath.Join(templatesDir, "*.html"))
+	funcMap := template.FuncMap{
+		"ShortenPath":  ShortenPath,
+		"RemovePrefix": RemovePrefix,
+	}
+
+	t, err := template.New("").
+		Funcs(funcMap).
+		ParseFS(fs, filepath.Join(templatesDir, "*.html"))
 
 	return &Server{
 		db:        db,
@@ -270,4 +282,46 @@ func (s Server) OpenDeleteDialog(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		s.abortWithError(w, err, http.StatusBadRequest)
 	}
+}
+
+func ShortenPath(path string) string {
+	parts := strings.Split(path, string(filepath.Separator))
+
+	includedParts := []string{parts[len(parts)-1]}
+
+	remainingSpace := maxPathCharacters - len(parts[len(parts)-1])
+
+	for i := len(parts) - 2; i >= 0; i-- {
+		if parts[i] == "" || len(parts[i]) >= remainingSpace {
+			break
+		}
+
+		includedParts = slices.Insert(includedParts, 0, parts[i])
+
+		remainingSpace -= len(parts[i]) + 1 // +1 for the slash
+	}
+
+	prefix := ".../"
+	if len(includedParts) == len(parts)-1 {
+		prefix = "/"
+	}
+
+	return prefix + strings.Join(includedParts, "/")
+}
+
+func RemovePrefix(path, prefix string) string {
+	if path == prefix {
+		return path
+	}
+
+	if !strings.HasPrefix(path, prefix) {
+		return path
+	}
+
+	shortenedPath := path[len(prefix):]
+	if !strings.HasPrefix(shortenedPath, "/") {
+		shortenedPath = "/" + shortenedPath
+	}
+
+	return "$ReportingRoot" + shortenedPath
 }

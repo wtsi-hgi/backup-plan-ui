@@ -4,7 +4,6 @@ body {
     font-size: 14px;
 }
 
-/* Table styles */
 table {
     width: 100%;
     border-collapse: collapse;
@@ -19,8 +18,13 @@ th, td {
 th {
     background-color: #f2f2f2;
     font-weight: 600;
+}
+
+thead tr {
+    background-color: #f2f2f2;
     position: sticky;
     top: 0;
+    z-index: 100;
 }
 
 tr:hover {
@@ -242,33 +246,54 @@ tr.editing {
 }
   
 .tooltip .tooltiptext {
-  visibility: hidden;
-  width: 360px;
+  display: none;
   background-color: rgb(122, 122, 122);
   color: #fff;
-  text-align: center;
   border-radius: 6px;
-  padding: 5px;
+  padding: 6px 10px;
   font-weight: 100;
 
   position: absolute;
-  z-index: 1;
-  top: 100%;
-  margin-left: -180px;
+  min-width: 300px;
 
-  margin-top: 12px;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+
+  margin-top: 8px;
 }
 
+.tooltip .tooltiptext.path {
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);  
+    
+    background-color: rgb(122, 122, 122);
+    color: #fff;
+    border-radius: 6px;
+    padding: 6px 10px;
+    font-family: monospace;
+    font-size: 13px;
+    
+    max-width: 50vw;              
+    min-width: 160px;
+    width: max-content;           
+    white-space: pre-wrap;        
+    word-break: break-all;       
+    overflow-wrap: anywhere;
+}
+  
 .tooltip .tooltiptext.top {
   left: 50%;
 }
 
 .tooltip .tooltiptext.right {
-    left: 150%;
+    left: 0;
+    transform: translateX(0);
 }
 
 .tooltip:hover .tooltiptext {
-  visibility: visible;
+  display: block;
 }
 
 .tooltip .tooltiptext::after {
@@ -280,6 +305,7 @@ tr.editing {
     border-width: 5px;
     border-style: solid;
     border-color: transparent transparent rgb(122, 122, 122) transparent;
+    font-size: 0;
 }
 
 .tooltip .tooltiptext.right::after {
