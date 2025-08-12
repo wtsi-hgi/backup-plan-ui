@@ -23,7 +23,7 @@ type MySQLSource struct {
 	*SQLSource
 }
 
-const defaultTableName = "entries"
+const DefaultTableName = "entries"
 
 const createTableTmpl = `CREATE TABLE IF NOT EXISTS %s (
 	id INTEGER PRIMARY KEY %s,
@@ -62,7 +62,7 @@ func (sq SQLSource) callAndLogError(f func() error) {
 func NewSQLiteSource(path string) (SQLiteSource, error) {
 	db, err := sql.Open("sqlite3", path)
 
-	return SQLiteSource{&SQLSource{db: db, tableName: defaultTableName}}, err
+	return SQLiteSource{&SQLSource{db: db, tableName: DefaultTableName}}, err
 }
 
 // NewMySQLSource opens a connection to a MySQL database using given credentials and stores it internally.
@@ -250,4 +250,39 @@ func (sq SQLSource) WriteEntries(entries []*Entry) error {
 	}
 
 	return err
+}
+
+func (sq SQLSource) DropTable() error {
+	_, err := sq.db.Exec(fmt.Sprintf("DROP TABLE %s", sq.tableName))
+	return err
+}
+
+func (sq MySQLSource) ShowTables() ([]string, error) {
+	return sq.scanTableNames("SHOW TABLES")
+}
+
+func (sq SQLSource) scanTableNames(stmt string) ([]string, error) {
+	rows, err := sq.db.Query(stmt)
+	if err != nil {
+		return nil, err
+	}
+	defer sq.callAndLogError(rows.Close)
+
+	var tableName string
+	var tableNames []string
+
+	for rows.Next() {
+		err = rows.Scan(&tableName)
+		if err != nil {
+			return nil, err
+		}
+
+		tableNames = append(tableNames, tableName)
+	}
+
+	return tableNames, nil
+}
+
+func (sq SQLiteSource) ShowTables() ([]string, error) {
+	return sq.scanTableNames("SELECT name FROM sqlite_master WHERE type='table'")
 }

@@ -1,7 +1,6 @@
 package sources
 
 import (
-	"database/sql"
 	"log"
 	"os"
 	"path/filepath"
@@ -140,7 +139,7 @@ func TestMySQLSource_WriteEntries(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer cleanupMySQL(t, sq, tableName)
+	defer cleanupMySQL(t, sq)
 
 	entries := createTestEntries(t)
 
@@ -171,34 +170,14 @@ func TestSQLiteSource_CreateTable(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	stmt := "SELECT name FROM sqlite_master WHERE type='table' ORDER BY name;"
-	tableNames := scanTableNames(t, sq.db, stmt)
-
-	if ok, err := So(tableNames, ShouldContain, defaultTableName); !ok {
-		log.Fatal(err)
-	}
-}
-
-func scanTableNames(t *testing.T, db *sql.DB, stmt string) []string {
-	rows, err := db.Query(stmt)
+	tableNames, err := sq.ShowTables()
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer callAndLogError(t, rows.Close)
 
-	var tableName string
-	var tableNames []string
-
-	for rows.Next() {
-		err = rows.Scan(&tableName)
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		tableNames = append(tableNames, tableName)
+	if ok, err := So(tableNames, ShouldContain, DefaultTableName); !ok {
+		log.Fatal(err)
 	}
-
-	return tableNames
 }
 
 func TestMySQLSource_CreateTable(t *testing.T) {
@@ -221,9 +200,12 @@ func TestMySQLSource_CreateTable(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer cleanupMySQL(t, sq, tableName)
+	defer cleanupMySQL(t, sq)
 
-	tableNames := scanTableNames(t, sq.db, "SHOW TABLES")
+	tableNames, err := sq.ShowTables()
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	if ok, err := So(tableNames, ShouldContain, tableName); !ok {
 		log.Fatal(err)
@@ -314,10 +296,10 @@ func createTestMySQLTable(t *testing.T) ([]*Entry, MySQLSource, string) {
 func setupMySQLSourceForTest(t *testing.T) ([]*Entry, DataSource) {
 	t.Helper()
 
-	entries, sq, tableName := createTestMySQLTable(t)
+	entries, sq, _ := createTestMySQLTable(t)
 
 	cleanup := func() {
-		cleanupMySQL(t, sq, tableName)
+		cleanupMySQL(t, sq)
 	}
 
 	t.Cleanup(cleanup)
@@ -325,12 +307,10 @@ func setupMySQLSourceForTest(t *testing.T) ([]*Entry, DataSource) {
 	return entries, sq
 }
 
-func cleanupMySQL(t *testing.T, sq MySQLSource, tableName string) {
-	_, err := sq.db.Exec("DROP TABLE " + tableName)
-	if err != nil {
-		t.Logf("Failed to drop table %s: %v\n", tableName, err)
-	}
+func cleanupMySQL(t *testing.T, sq MySQLSource) {
+	t.Helper()
 
+	callAndLogError(t, sq.DropTable)
 	callAndLogError(t, sq.Close)
 }
 
