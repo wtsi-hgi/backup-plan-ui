@@ -4,7 +4,6 @@ body {
     font-size: 14px;
 }
 
-/* Table styles */
 table {
     width: 100%;
     border-collapse: collapse;
@@ -25,6 +24,7 @@ thead tr {
     background-color: #f2f2f2;
     position: sticky;
     top: 0;
+    z-index: 100;
 }
 
 tr:hover {
@@ -275,7 +275,7 @@ tr.editing {
     font-family: monospace;
     font-size: 13px;
     
-    max-width: 70vw;              
+    max-width: 50vw;              
     min-width: 160px;
     width: max-content;           
     white-space: pre-wrap;        
