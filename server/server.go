@@ -8,6 +8,7 @@ import (
 	"log/slog"
 	"net/http"
 	"path/filepath"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -284,22 +285,20 @@ func (s Server) OpenDeleteDialog(w http.ResponseWriter, r *http.Request) {
 }
 
 func ShortenPath(path string) string {
-	parts := strings.Split(path, "/")
+	parts := strings.Split(path, string(filepath.Separator))
 
 	includedParts := []string{parts[len(parts)-1]}
 
 	remainingSpace := maxPathCharacters - len(parts[len(parts)-1])
 
 	for i := len(parts) - 2; i >= 0; i-- {
-		if len(parts[i]) < remainingSpace && parts[i] != "" {
-			includedParts = append([]string{parts[i]}, includedParts...)
-
-			remainingSpace -= len(parts[i]) + 1 // +1 for the slash
-
-			continue
+		if parts[i] == "" || len(parts[i]) >= remainingSpace {
+			break
 		}
 
-		break
+		includedParts = slices.Insert(includedParts, 0, parts[i])
+
+		remainingSpace -= len(parts[i]) + 1 // +1 for the slash
 	}
 
 	prefix := ".../"
@@ -311,6 +310,10 @@ func ShortenPath(path string) string {
 }
 
 func RemovePrefix(path, prefix string) string {
+	if path == prefix {
+		return path
+	}
+
 	if !strings.HasPrefix(path, prefix) {
 		return path
 	}

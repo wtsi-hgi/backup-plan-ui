@@ -341,6 +341,84 @@ func TestValidateForm(t *testing.T) {
 	}
 }
 
+func TestShortenPath(t *testing.T) {
+	tests := []struct {
+		name          string
+		pathToShorten string
+		expectedPath  string
+	}{
+		{
+			name:          "Final directories are never shortened",
+			pathToShorten: "/a/path/with-a-final-directory-name-longer-than-50-characters", // 54 characters
+			expectedPath:  ".../with-a-final-directory-name-longer-than-50-characters",
+		},
+		{
+			name:          "As many subdirs as possible are included",
+			pathToShorten: "/a/path/with/lots/of/sub/directories/that/is/unfortunately/longer/than/50/characters",
+			expectedPath:  ".../that/is/unfortunately/longer/than/50/characters",
+		},
+		{
+			name:          "The full path is included if possible",
+			pathToShorten: "/a/short/path",
+			expectedPath:  "/a/short/path",
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			shortenedPath := ShortenPath(test.pathToShorten)
+
+			if ok, err := So(shortenedPath, ShouldEqual, test.expectedPath); !ok {
+				t.Fatal(err)
+			}
+		})
+	}
+}
+
+func TestRemovePrefix(t *testing.T) {
+	tests := []struct {
+		name           string
+		pathWithPrefix string
+		prefix         string
+		expectedPath   string
+	}{
+		{
+			name:           "Prefix can end in a slash",
+			pathWithPrefix: "/a/path/with/a/prefix",
+			prefix:         "/a/path/",
+			expectedPath:   "$ReportingRoot/with/a/prefix",
+		},
+		{
+			name:           "Prefix doesn't need to end in a slash",
+			pathWithPrefix: "/a/path/with/a/prefix",
+			prefix:         "/a/path",
+			expectedPath:   "$ReportingRoot/with/a/prefix",
+		},
+		{
+			name:           "If the prefix is identical to the path, nothing changes",
+			pathWithPrefix: "/a/path/",
+			prefix:         "/a/path/",
+			expectedPath:   "/a/path/",
+		},
+		{
+			name:           "If the provided prefix isn't a prefix, nothing changes",
+			pathWithPrefix: "/a/path/",
+			prefix:         "/a/different/path",
+			expectedPath:   "/a/path/",
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			shortenedPath := RemovePrefix(test.pathWithPrefix, test.prefix)
+
+			if ok, err := So(shortenedPath, ShouldEqual, test.expectedPath); !ok {
+				t.Fatal(err)
+			}
+		})
+	}
+}
+
 func createFormFromEntry(entry sources.Entry) url.Values {
 	form := make(url.Values)
 
