@@ -1,15 +1,15 @@
 <tr data-id="{{.Entry.ID}}">
     <td>{{.Entry.ReportingName}}</td>
     <td>
-      <span class="path">{{ShortenPath .Entry.ReportingRoot}}</span>
       <div class="tooltip">
-        <span class="tooltiptext path">{{.Entry.ReportingRoot}}</span>
+        <span class="path">{{ShortenPath .Entry.ReportingRoot}}</span>
+        <span class="tooltiptext path right">{{.Entry.ReportingRoot}}</span>
       </div>
     </td>
     <td>
-      <span class="path">{{ShortenPath .Entry.Directory}}</span>
       <div class="tooltip">
-        <span class="tooltiptext path">{{.Entry.Directory}}</span>
+        <span class="path">{{ShortenPath .Entry.Directory}}</span>
+        <span class="tooltiptext path">{{RemovePrefix .Entry.Directory .Entry.ReportingRoot}}</span>
       </div>
     </td>
     <td>{{.Entry.Instruction}}</td>

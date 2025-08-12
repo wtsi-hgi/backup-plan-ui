@@ -19,11 +19,15 @@ type Server struct {
 	templates *template.Template
 }
 
-const templatesDir = "templates"
+const (
+	templatesDir      = "templates"
+	maxPathCharacters = 50
+)
 
 func NewServer(db sources.DataSource, fs embed.FS) (*Server, error) {
 	funcMap := template.FuncMap{
-		"ShortenPath": ShortenPath, // Register the function
+		"ShortenPath":  ShortenPath,
+		"RemovePrefix": RemovePrefix,
 	}
 
 	t, err := template.New("").
@@ -280,22 +284,41 @@ func (s Server) OpenDeleteDialog(w http.ResponseWriter, r *http.Request) {
 }
 
 func ShortenPath(path string) string {
-	maxParts := 3
-
 	parts := strings.Split(path, "/")
 
-	// Handle absolute path
-	prefix := ""
-	if strings.HasPrefix(path, "/") {
+	includedParts := []string{parts[len(parts)-1]}
+
+	remainingSpace := maxPathCharacters - len(parts[len(parts)-1])
+
+	for i := len(parts) - 2; i >= 0; i-- {
+		if len(parts[i]) < remainingSpace && parts[i] != "" {
+			includedParts = append([]string{parts[i]}, includedParts...)
+
+			remainingSpace -= len(parts[i]) + 1 // +1 for the slash
+
+			continue
+		}
+
+		break
+	}
+
+	prefix := ".../"
+	if len(includedParts) == len(parts)-1 {
 		prefix = "/"
-		parts = parts[1:] // remove the empty string at index 0
 	}
 
-	if len(parts) <= maxParts {
-		return prefix + strings.Join(parts, "/")
+	return prefix + strings.Join(includedParts, "/")
+}
+
+func RemovePrefix(path, prefix string) string {
+	if !strings.HasPrefix(path, prefix) {
+		return path
 	}
 
-	first := parts[0]
-	lastParts := parts[len(parts)-(maxParts-1):]
-	return prefix + first + "/.../" + strings.Join(lastParts, "/")
+	shortenedPath := path[len(prefix):]
+	if !strings.HasPrefix(shortenedPath, "/") {
+		shortenedPath = "/" + shortenedPath
+	}
+
+	return "$ReportingRoot" + shortenedPath
 }
