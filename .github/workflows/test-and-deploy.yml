@@ -13,8 +13,17 @@ on:
 jobs:
   test:
     name: Run Tests
-    runs-on: ubuntu-latest
-    
+    runs-on: self-hosted
+
+    environment: development
+
+    env:
+      MYSQL_HOST: ${{ secrets.MYSQL_HOST }}
+      MYSQL_PASS: ${{ secrets.MYSQL_PASS }}
+      MYSQL_PORT: ${{ secrets.MYSQL_PORT }}
+      MYSQL_USER: ${{ secrets.MYSQL_USER }}
+      MYSQL_DATABASE: ${{ secrets.MYSQL_DATABASE }}
+
     steps:
     - name: Checkout code
       uses: actions/checkout@v3
