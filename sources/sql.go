@@ -101,17 +101,18 @@ func (sq SQLSource) Close() error {
 }
 
 func (sq SQLiteSource) CreateTable() error {
-	createTableStmt := fmt.Sprintf(createTableTmpl, sq.tableName, "AUTOINCREMENT", Backup, NoBackup, TempBackup)
+	return sq.createTable("AUTOINCREMENT")
+}
+
+func (sq SQLSource) createTable(incrementTerm string) error {
+	createTableStmt := fmt.Sprintf(createTableTmpl, sq.tableName, incrementTerm, Backup, NoBackup, TempBackup)
 	_, err := sq.db.Exec(createTableStmt)
 
 	return err
 }
 
 func (sq MySQLSource) CreateTable() error {
-	createTableStmt := fmt.Sprintf(createTableTmpl, sq.tableName, "AUTO_INCREMENT", Backup, NoBackup, TempBackup)
-	_, err := sq.db.Exec(createTableStmt)
-
-	return err
+	return sq.createTable("AUTO_INCREMENT")
 }
 
 func (sq SQLSource) ReadAll() ([]*Entry, error) {
