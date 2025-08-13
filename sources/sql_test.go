@@ -1,6 +1,7 @@
 package sources
 
 import (
+	"errors"
 	"log"
 	"os"
 	"path/filepath"
@@ -131,6 +132,10 @@ func TestMySQLSource_WriteEntries(t *testing.T) {
 		tableName,
 	)
 	if err != nil {
+		if errors.Is(err, ErrMissingArgument) {
+			t.Skip("Skipping MySQL test because MySQL host, port, user, pass, or database is not set.")
+		}
+
 		t.Fatal(err)
 	}
 	defer callAndLogError(t, sq.Close)
@@ -192,6 +197,10 @@ func TestMySQLSource_CreateTable(t *testing.T) {
 		tableName,
 	)
 	if err != nil {
+		if errors.Is(err, ErrMissingArgument) {
+			t.Skip("Skipping MySQL test because MySQL host, port, user, pass, or database is not set.")
+		}
+
 		t.Fatal(err)
 	}
 	defer callAndLogError(t, sq.Close)
@@ -277,6 +286,10 @@ func createTestMySQLTable(t *testing.T) ([]*Entry, MySQLSource, string) {
 		tableName,
 	)
 	if err != nil {
+		if errors.Is(err, ErrMissingArgument) {
+			t.Skip("Skipping MySQL test because MySQL host, port, user, pass, or database is not set.")
+		}
+
 		t.Fatal(err)
 	}
 

@@ -1,6 +1,7 @@
 package converter
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
 	"testing"
@@ -59,6 +60,10 @@ func TestConvertCsvToMySQL(t *testing.T) {
 		tableName,
 	)
 	if err != nil {
+		if errors.Is(err, sources.ErrMissingArgument) {
+			t.Skip("Skipping MySQL test because MySQL host, port, user, pass, or database is not set.")
+		}
+
 		t.Fatal(err)
 	}
 

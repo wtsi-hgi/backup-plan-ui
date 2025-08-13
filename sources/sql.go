@@ -4,7 +4,6 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"log"
 	"log/slog"
 
 	_ "github.com/go-sql-driver/mysql"
@@ -51,6 +50,8 @@ const (
 			          VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
 )
 
+var ErrMissingArgument = errors.New("missing required argument")
+
 func (sq SQLSource) callAndLogError(f func() error) {
 	err := f()
 	if err != nil {
@@ -86,7 +87,7 @@ func NewMySQLSource(host, port, user, password, dbName, tableName string) (MySQL
 		missing = append(missing, "dbName")
 	}
 	if len(missing) > 0 {
-		log.Fatalf("Missing required arguments: %v\n", missing)
+		return MySQLSource{}, fmt.Errorf("%w: %v\n", ErrMissingArgument, missing)
 	}
 
 	address := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s", user, password, host, port, dbName)
