@@ -9,7 +9,6 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
-	"path/filepath"
 
 	"github.com/go-chi/chi/v5"
 )
@@ -21,21 +20,11 @@ var staticFiles embed.FS
 var templateFiles embed.FS
 
 func main() {
-	if len(os.Args) != 2 {
-		fmt.Printf("Usage: %s <path-to-csv>\n", filepath.Base(os.Args[0]))
-		os.Exit(1)
-	}
-
 	log.SetFlags(0) // timestamp comes from systemd
 
-	dbPath, err := filepath.Abs(os.Args[1])
-	if err != nil {
-		log.Fatal(err)
-	}
+	db := parseArgs(os.Args[1:])
 
-	slog.Info("Using database: " + dbPath)
-
-	srv, err := server.NewServer(sources.CSVSource{Path: dbPath}, templateFiles)
+	srv, err := server.NewServer(db, templateFiles)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -64,6 +53,62 @@ func main() {
 	if err := http.ListenAndServe(":"+port, r); err != nil {
 		log.Fatalf("Server failed to start: %v", err)
 	}
+}
+
+func parseArgs(args []string) sources.DataSource {
+	if len(args) == 0 {
+		usage("Not enough arguments.")
+	}
+
+	backend := args[0]
+
+	var (
+		db  sources.DataSource
+		msg string
+		err error
+	)
+
+	switch {
+	case backend == "mysql":
+		db, err = sources.NewMySQLSource(
+			os.Getenv("MYSQL_HOST"),
+			os.Getenv("MYSQL_PORT"),
+			os.Getenv("MYSQL_USER"),
+			os.Getenv("MYSQL_PASS"),
+			os.Getenv("MYSQL_DATABASE"),
+			sources.DefaultTableName,
+		)
+		msg = "Using MySQL database"
+	case len(args) == 1:
+		usage("Not enough arguments.")
+	case backend == "sqlite":
+		db, err = sources.NewSQLiteSource(args[1])
+		msg = "Using SQLite database: " + args[1]
+	case backend == "csv":
+		db = sources.CSVSource{Path: args[1]}
+		msg = "Using CSV file: " + args[1]
+	default:
+		usage("Arguments are not recognized.")
+	}
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	slog.Info(msg)
+
+	return db
+}
+
+func usage(msg string) {
+	if msg != "" {
+		slog.Error(msg)
+	}
+	fmt.Println("Usage:")
+	fmt.Println("  backup-plan-ui csv <path/to/file.csv>")
+	fmt.Println("  backup-plan-ui sqlite <path/to/file.sqlite>")
+	fmt.Println("  backup-plan-ui mysql")
+	os.Exit(2)
 }
 
 var returnEmpty = func(w http.ResponseWriter, r *http.Request) {}
