@@ -1,4 +1,4 @@
-module backup-plan-ui
+module github.com/wtsi-hgi/backup-plan-ui
 
 go 1.24.4
 

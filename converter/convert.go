@@ -7,7 +7,7 @@ import (
 	"slices"
 	"strings"
 
-	. "backup-plan-ui/sources"
+	. "github.com/wtsi-hgi/backup-plan-ui/sources"
 )
 
 var ErrWrongEntry = errors.New("wrong entry")
