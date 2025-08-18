@@ -1,7 +1,7 @@
 package server
 
 import (
-	"backup-plan-ui/sources"
+	"github.com/wtsi-hgi/backup-plan-ui/sources"
 	"net/http"
 	"path/filepath"
 	"strings"

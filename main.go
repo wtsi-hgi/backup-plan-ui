@@ -1,8 +1,8 @@
 package main
 
 import (
-	"backup-plan-ui/server"
-	"backup-plan-ui/sources"
+	"github.com/wtsi-hgi/backup-plan-ui/server"
+	"github.com/wtsi-hgi/backup-plan-ui/sources"
 	"embed"
 	"fmt"
 	"log"

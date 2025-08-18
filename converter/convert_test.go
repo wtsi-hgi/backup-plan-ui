@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"backup-plan-ui/sources"
+	"github.com/wtsi-hgi/backup-plan-ui/sources"
 
 	. "github.com/smarty/assertions"
 )
