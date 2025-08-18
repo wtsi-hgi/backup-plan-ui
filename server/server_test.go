@@ -1,7 +1,6 @@
 package server
 
 import (
-	"github.com/wtsi-hgi/backup-plan-ui/sources"
 	"context"
 	"fmt"
 	"html/template"
@@ -12,6 +11,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/wtsi-hgi/backup-plan-ui/sources"
 
 	"github.com/go-chi/chi/v5"
 	. "github.com/smarty/assertions"
@@ -208,7 +209,12 @@ func TestDeleteRow(t *testing.T) {
 		s.DeleteRow(w, r)
 
 		res := w.Result()
-		defer res.Body.Close()
+		defer func() {
+			err := res.Body.Close()
+			if err != nil {
+				t.Log(err)
+			}
+		}()
 
 		if ok, err := So(res.StatusCode, ShouldEqual, http.StatusBadRequest); !ok {
 			t.Error(err)
@@ -226,7 +232,12 @@ func TestDeleteRow(t *testing.T) {
 		s.DeleteRow(w, r)
 
 		res := w.Result()
-		defer res.Body.Close()
+		defer func() {
+			err := res.Body.Close()
+			if err != nil {
+				t.Log(err)
+			}
+		}()
 
 		if ok, err := So(res.StatusCode, ShouldEqual, http.StatusInternalServerError); !ok {
 			t.Error(err)
@@ -426,6 +437,7 @@ func createFormFromEntry(entry sources.Entry) url.Values {
 	form.Set(ReportingRoot.string(), entry.ReportingRoot)
 	form.Set(Directory.string(), entry.Directory)
 	form.Set(Instruction.string(), string(entry.Instruction))
+	form.Set(Frequency.string(), entry.Frequency)
 	form.Set(Match.string(), entry.Match)
 	form.Set(Ignore.string(), entry.Ignore)
 	form.Set(Requestor.string(), entry.Requestor)
@@ -462,7 +474,12 @@ func createServer(t *testing.T) (Server, []*sources.Entry) {
 
 func getBodyAndCheckStatusOK(t *testing.T, w *httptest.ResponseRecorder) string {
 	res := w.Result()
-	defer res.Body.Close()
+	defer func() {
+		err := res.Body.Close()
+		if err != nil {
+			t.Log(err)
+		}
+	}()
 
 	if ok, err := So(res.StatusCode, ShouldEqual, http.StatusOK); !ok {
 		t.Error(err)

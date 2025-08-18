@@ -56,7 +56,7 @@ const (
 	deleteEntryStmt     = "DELETE FROM %s WHERE id = ?"
 	deleteReturningStmt = "DELETE FROM %s WHERE id = ? RETURNING *"
 	getAllStmt          = `SELECT id, reporting_name, reporting_root, directory, instruction, 
-		                   keep, skip, requestor, faculty FROM %s`
+		                   frequency, keep, skip, requestor, faculty FROM %s`
 	updateEntryStmt = `UPDATE %s 
 					   SET reporting_name = ?, reporting_root = ?, directory = ?, instruction = ?, frequency = ?,
                        keep = ?, skip = ?, requestor = ?, faculty = ? WHERE id = ?`

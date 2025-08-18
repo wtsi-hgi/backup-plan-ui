@@ -1,8 +1,6 @@
 package main
 
 import (
-	"backup-plan-ui/server"
-	"backup-plan-ui/sources"
 	"embed"
 	"fmt"
 	"log"
