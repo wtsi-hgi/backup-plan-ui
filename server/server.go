@@ -1,7 +1,6 @@
 package server
 
 import (
-	"github.com/wtsi-hgi/backup-plan-ui/sources"
 	"embed"
 	"fmt"
 	"html/template"
@@ -11,6 +10,8 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+
+	"github.com/wtsi-hgi/backup-plan-ui/sources"
 
 	"github.com/go-chi/chi/v5"
 )
@@ -323,5 +324,5 @@ func RemovePrefix(path, prefix string) string {
 		shortenedPath = "/" + shortenedPath
 	}
 
-	return "$ReportingRoot" + shortenedPath
+	return "<reporting root>" + shortenedPath
 }

@@ -386,13 +386,13 @@ func TestRemovePrefix(t *testing.T) {
 			name:           "Prefix can end in a slash",
 			pathWithPrefix: "/a/path/with/a/prefix",
 			prefix:         "/a/path/",
-			expectedPath:   "$ReportingRoot/with/a/prefix",
+			expectedPath:   "<reporting root>/with/a/prefix",
 		},
 		{
 			name:           "Prefix doesn't need to end in a slash",
 			pathWithPrefix: "/a/path/with/a/prefix",
 			prefix:         "/a/path",
-			expectedPath:   "$ReportingRoot/with/a/prefix",
+			expectedPath:   "<reporting root>/with/a/prefix",
 		},
 		{
 			name:           "If the prefix is identical to the path, nothing changes",
