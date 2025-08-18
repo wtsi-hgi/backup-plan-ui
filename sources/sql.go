@@ -38,16 +38,17 @@ const createTableTmpl = `CREATE TABLE IF NOT EXISTS %s (
 )`
 
 const (
-	getAllStmt          = "SELECT * FROM %s"
-	getEntryStmt        = "SELECT * FROM %s WHERE id = ?"
+	getEntryStmt        = getAllStmt + " WHERE id = ?"
 	deleteEntryStmt     = "DELETE FROM %s WHERE id = ?"
 	deleteReturningStmt = "DELETE FROM %s WHERE id = ? RETURNING *"
-	updateEntryStmt     = `UPDATE %s 
+	getAllStmt          = `SELECT id, reporting_name, reporting_root, directory, instruction, 
+		                   keep, skip, requestor, faculty FROM %s`
+	updateEntryStmt = `UPDATE %s 
 					   SET reporting_name = ?, reporting_root = ?, directory = ?, instruction = ?, 
                        keep = ?, skip = ?, requestor = ?, faculty = ? WHERE id = ?`
 	insertEntryStmt = `INSERT INTO %s 
-			          (reporting_name, reporting_root, directory, instruction, keep, skip, requestor, faculty) 
-			          VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+			           (reporting_name, reporting_root, directory, instruction, keep, skip, requestor, faculty) 
+			           VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
 )
 
 var ErrMissingArgument = errors.New("missing required argument")

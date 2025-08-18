@@ -1,14 +1,15 @@
 package main
 
 import (
-	"github.com/wtsi-hgi/backup-plan-ui/server"
-	"github.com/wtsi-hgi/backup-plan-ui/sources"
 	"embed"
 	"fmt"
 	"log"
 	"log/slog"
 	"net/http"
 	"os"
+
+	"github.com/wtsi-hgi/backup-plan-ui/server"
+	"github.com/wtsi-hgi/backup-plan-ui/sources"
 
 	"github.com/go-chi/chi/v5"
 )
