@@ -44,6 +44,19 @@
       </div>
     </td>
     <td>
+        <div class="field-wrapper">
+            <input
+                    name="Frequency"
+                    value="{{.Entry.Frequency}}"
+                    class='{{if index .Errors "Frequency"}}input-error{{end}}'
+                    list="frequency-options"
+            >
+            <div class="error-message">
+                {{with index .Errors "Frequency"}}{{.}}{{end}}
+            </div>
+        </div>
+    </td>
+    <td>
       <div class="field-wrapper">  
         <div x-data="tagInputComponent('{{.Entry.Match}}'.split(' ').map(t => t.trim()).filter(Boolean), 'Match')">
           <div class="tag-container {{if index .Errors "Match"}}input-error{{end}}">

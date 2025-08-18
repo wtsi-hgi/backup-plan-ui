@@ -20,6 +20,7 @@ func createTestEntries(t *testing.T) []*Entry {
 		ReportingRoot: "/some/path/to/project/dir",
 		Directory:     "/some/path/to/project/dir/input",
 		Instruction:   Backup,
+		Frequency:     "1w",
 		Requestor:     "user",
 		Faculty:       "group",
 	}

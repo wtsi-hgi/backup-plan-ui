@@ -30,12 +30,13 @@ func validateForm(r *http.Request) map[formField]string {
 	fv.validateNonBlankInputs()
 	fv.validateInstructionAndIgnore()
 	fv.validateDirectoryAndRoot()
+	fv.validateFrequency()
 
 	return fv.errors
 }
 
 func (fv FormValidator) validateNonBlankInputs() {
-	requiredFields := []formField{ReportingName, ReportingRoot, Directory,
+	requiredFields := []formField{ReportingName, ReportingRoot, Directory, Frequency,
 		Instruction, Requestor, Faculty}
 
 	for _, requiredField := range requiredFields {
@@ -94,5 +95,14 @@ func (fv FormValidator) validateDirectoryAndRoot() {
 
 	if depth < 5 {
 		fv.addErrorIfNew(ReportingRoot, ErrReportingRootNotDeepEnough)
+	}
+}
+
+func (fv FormValidator) validateFrequency() {
+	freq := fv.getFormValue(Frequency)
+
+	_, err := sources.ParseFrequency(freq)
+	if err != nil {
+		fv.addErrorIfNew(Frequency, err.Error())
 	}
 }

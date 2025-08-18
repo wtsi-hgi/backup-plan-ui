@@ -25,16 +25,30 @@ type MySQLSource struct {
 
 const DefaultTableName = "entries"
 
-const createTableTmpl = `CREATE TABLE IF NOT EXISTS %s (
-	id INTEGER PRIMARY KEY %s,
+const createSqliteTableTmpl = `CREATE TABLE IF NOT EXISTS %s (
+	id INTEGER PRIMARY KEY AUTOINCREMENT,
 	reporting_name TEXT,
 	reporting_root TEXT,
 	directory TEXT,
 	instruction TEXT CHECK ( instruction IN ('%s', '%s', '%s') ),
+    frequency TEXT,
 	keep TEXT,
 	skip TEXT,
 	requestor TEXT,
 	faculty TEXT
+)`
+
+const createMySQLTableTmpl = `CREATE TABLE IF NOT EXISTS %s (
+	id INT UNSIGNED PRIMARY KEY AUTO_INCREMENT,
+	reporting_name TINYTEXT NOT NULL,
+	reporting_root MEDIUMTEXT NOT NULL,
+	directory MEDIUMTEXT NOT NULL,
+	instruction ENUM('%s', '%s', '%s') NOT NULL,
+    frequency VARCHAR(3) NOT NULL,
+	keep MEDIUMTEXT,
+    skip MEDIUMTEXT,
+    requestor VARCHAR(10) NOT NULL,
+    faculty VARCHAR(30) NOT NULL
 )`
 
 const (
@@ -44,11 +58,11 @@ const (
 	getAllStmt          = `SELECT id, reporting_name, reporting_root, directory, instruction, 
 		                   keep, skip, requestor, faculty FROM %s`
 	updateEntryStmt = `UPDATE %s 
-					   SET reporting_name = ?, reporting_root = ?, directory = ?, instruction = ?, 
+					   SET reporting_name = ?, reporting_root = ?, directory = ?, instruction = ?, frequency = ?,
                        keep = ?, skip = ?, requestor = ?, faculty = ? WHERE id = ?`
 	insertEntryStmt = `INSERT INTO %s 
-			           (reporting_name, reporting_root, directory, instruction, keep, skip, requestor, faculty) 
-			           VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+			           (reporting_name, reporting_root, directory, instruction, frequency, keep, skip, requestor, faculty) 
+			           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
 )
 
 var ErrMissingArgument = errors.New("missing required argument")
@@ -103,18 +117,18 @@ func (sq SQLSource) Close() error {
 }
 
 func (sq SQLiteSource) CreateTable() error {
-	return sq.createTable("AUTOINCREMENT")
+	return sq.createTable(createSqliteTableTmpl)
 }
 
-func (sq SQLSource) createTable(incrementTerm string) error {
-	createTableStmt := fmt.Sprintf(createTableTmpl, sq.tableName, incrementTerm, Backup, NoBackup, TempBackup)
+func (sq SQLSource) createTable(tmpl string) error {
+	createTableStmt := fmt.Sprintf(tmpl, sq.tableName, Backup, NoBackup, TempBackup)
 	_, err := sq.db.Exec(createTableStmt)
 
 	return err
 }
 
 func (sq MySQLSource) CreateTable() error {
-	return sq.createTable("AUTO_INCREMENT")
+	return sq.createTable(createMySQLTableTmpl)
 }
 
 func (sq SQLSource) ReadAll() ([]*Entry, error) {
@@ -147,7 +161,7 @@ func (sq SQLSource) scanEntry(row scanner) (*Entry, error) {
 	var entry Entry
 
 	err := row.Scan(&entry.ID, &entry.ReportingName, &entry.ReportingRoot, &entry.Directory,
-		&entry.Instruction, &entry.Match, &entry.Ignore, &entry.Requestor, &entry.Faculty)
+		&entry.Instruction, &entry.Frequency, &entry.Match, &entry.Ignore, &entry.Requestor, &entry.Faculty)
 
 	return &entry, err
 }
@@ -165,8 +179,8 @@ func (sq SQLSource) GetEntry(id uint16) (*Entry, error) {
 func (sq SQLSource) UpdateEntry(newEntry *Entry) error {
 	stmt := fmt.Sprintf(updateEntryStmt, sq.tableName)
 
-	r, err := sq.db.Exec(stmt, newEntry.ReportingName, newEntry.ReportingRoot, newEntry.Directory,
-		newEntry.Instruction, newEntry.Match, newEntry.Ignore, newEntry.Requestor, newEntry.Faculty, newEntry.ID)
+	r, err := sq.db.Exec(stmt, newEntry.ReportingName, newEntry.ReportingRoot, newEntry.Directory, newEntry.Instruction,
+		newEntry.Frequency, newEntry.Match, newEntry.Ignore, newEntry.Requestor, newEntry.Faculty, newEntry.ID)
 
 	if err != nil {
 		return err
@@ -259,7 +273,7 @@ func (sq SQLSource) WriteEntries(entries []*Entry) error {
 
 	for _, entry := range entries {
 		r, err := stmt.Exec(entry.ReportingName, entry.ReportingRoot, entry.Directory,
-			entry.Instruction, entry.Match, entry.Ignore, entry.Requestor, entry.Faculty)
+			entry.Instruction, entry.Frequency, entry.Match, entry.Ignore, entry.Requestor, entry.Faculty)
 
 		if err != nil {
 			return err

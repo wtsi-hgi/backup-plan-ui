@@ -20,6 +20,13 @@
                 Add Row
             </button>
         </div>
+
+        <datalist id="frequency-options">
+            <option value="never"></option>
+            <option value="daily"></option>
+            <option value="weekly"></option>
+            <option value="monthly"></option>
+        </datalist>
         
         <div id="add-row-container"></div>
         
@@ -29,49 +36,55 @@
               <th>
                 <div class="tooltip">
                   <span class="path">Reporting name</span>
-                  <span class="tooltiptext right">A simple name that makes the report line easy to interpret.</span>
+                  <span class="tooltiptext right">A simple name that makes the report line easy to interpret</span>
                 </div>
               </th>
               <th>
                 <div class="tooltip">
                   <span class="path">Reporting root</span>
-                  <span class="tooltiptext top">The lustre directory root for the report : typically full path to project or user folder (or subfolder, if appropriate).</span>
+                  <span class="tooltiptext top">The lustre directory root for the report</span>
                 </div>
               </th>
               <th>
                 <div class="tooltip">
                   <span class="path">Directory</span>
-                  <span class="tooltiptext top">Full path to the folder where you want a backup or no backup to happen.</span>
+                  <span class="tooltiptext top">Full path to the folder where you want a backup or no backup to happen</span>
                 </div>
               </th>
               <th>
                 <div class="tooltip">
                   <span class="path">Instruction</span>
-                  <span class="tooltiptext top">In the specified folder, do you want a backup, no backup, or a temp backup to happen? Temp means the backup is kept for 3 months.</span>
+                  <span class="tooltiptext top">In the specified folder, do you want a backup, no backup, or a temp backup to happen? Temp means the backup is kept for 3 months</span>
                 </div>
+              </th>
+              <th>
+                  <div class="tooltip">
+                      <span class="path">Backup frequency</span>
+                      <span class="tooltiptext top">How often do you want to backup this folder?</span>
+                  </div>
               </th>
               <th>
                 <div class="tooltip">
                   <span class="path">Match</span>
-                  <span class="tooltiptext top">Only back up the file paths in the folder that match the given expression(s), only available when instruction is 'backup'.</span>
+                  <span class="tooltiptext top">Only back up the file paths in the folder that match the given expression(s)</span>
                 </div>
               </th>
-              <th>
+                <th>
                 <div class="tooltip">
                   <span class="path">Ignore</span>
-                  <span class="tooltiptext top">Never back up the file paths that match the given expression(s), only available when instruction is 'backup'.</span>
+                  <span class="tooltiptext top">Never back up the file paths that match the given expression(s)</span>
                 </div>
               </th>
               <th>
                 <div class="tooltip">
                   <span class="path">Requestor</span>
-                  <span class="tooltiptext top">User id of the person requesting the plan.</span>
+                  <span class="tooltiptext top">User id of the person requesting the plan</span>
                 </div>
               </th>
               <th>
                 <div class="tooltip">
                   <span class="path">Faculty</span>
-                  <span class="tooltiptext top">Faculty group / team of the person requesting the plan.</span>
+                  <span class="tooltiptext top">Faculty group / team of the person requesting the plan</span>
                 </div>
               </th>
               <th>Actions</th>
@@ -105,7 +118,7 @@
             }
           }
         }
-      </script>
+    </script>
 </body>
 </html>
 

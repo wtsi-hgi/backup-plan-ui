@@ -8,7 +8,7 @@
       </th>
       <th>
         <div class="tooltip">Reporting root
-          <span class="tooltiptext top">The lustre directory root for the report : typically full path to project or user folder (or subfolder, if appropriate).</span>
+          <span class="tooltiptext top">The lustre directory root for the report: typically full path to project or user folder (or subfolder, if appropriate).</span>
         </div>
       </th>
       <th>
@@ -20,6 +20,12 @@
         <div class="tooltip">Instruction
           <span class="tooltiptext top">In the specified folder, do you want a backup, no backup, or a temp backup to happen? Temp means the backup is kept for 3 months.</span>
         </div>
+      </th>
+      <th>
+          <div class="tooltip">
+              <span class="path">Backup frequency</span>
+              <span class="tooltiptext top">How often do you want to backup this folder? Select from the dropdown list or type in the format 2d, 3w</span>
+          </div>
       </th>
       <th>
         <div class="tooltip">Match
@@ -80,7 +86,7 @@
         <td>
           <div class="field-wrapper">
             <select name="Instruction"
-            class="{{if index .Errors "Instruction"}}input-error{{end}}">
+            class='{{if index .Errors "Instruction"}}input-error{{end}}'>
                 <option value="backup" {{if eq .Entry.Instruction "backup"}}selected{{end}}>backup</option>
                 <option value="nobackup" {{if eq .Entry.Instruction "nobackup"}}selected{{end}}>nobackup</option>
                 <option value="tempbackup" {{if eq .Entry.Instruction "tempbackup"}}selected{{end}}>tempbackup</option>
@@ -89,6 +95,20 @@
               {{with index .Errors "Match"}}{{.}}{{end}}
             </div>
           </div>
+        </td>
+        <td>
+            <div class="field-wrapper">
+                <input
+                    name="Frequency"
+                    value="{{.Entry.Frequency}}"
+                    class='{{if index .Errors "Frequency"}}input-error{{end}}'
+                    list="frequency-options"
+                    placeholder="double click to see options"
+                >
+                <div class="error-message">
+                    {{with index .Errors "Frequency"}}{{.}}{{end}}
+                </div>
+            </div>
         </td>
         <td>
           <div class="field-wrapper">  
@@ -135,7 +155,7 @@
                     placeholder="..."
                   >
                 </div>
-                <input type="hidden" :name="name" :value="tags.join(' ')">
+                <input type="hidden" name="name" value="tags.join(' ')">
             </div>
             <div class="error-message">
               {{with index .Errors "Ignore"}}{{.}}{{end}}

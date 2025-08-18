@@ -52,6 +52,7 @@ const (
 	ReportingName formField = "ReportingName"
 	ReportingRoot formField = "ReportingRoot"
 	Directory     formField = "Directory"
+	Frequency     formField = "Frequency"
 	Instruction   formField = "Instruction"
 	Match         formField = "Match"
 	Ignore        formField = "Ignore"
@@ -178,11 +179,14 @@ func (s Server) SubmitEdits(w http.ResponseWriter, r *http.Request) {
 }
 
 func createEntryFromForm(id uint16, r *http.Request) *sources.Entry {
+	freq, _ := sources.ParseFrequency(r.FormValue(Frequency.string()))
+
 	return &sources.Entry{
 		ID:            id,
 		ReportingName: r.FormValue(ReportingName.string()),
 		ReportingRoot: r.FormValue(ReportingRoot.string()),
 		Directory:     r.FormValue(Directory.string()),
+		Frequency:     freq,
 		Instruction:   sources.Instruction(r.FormValue(Instruction.string())),
 		Match:         r.FormValue(Match.string()),
 		Ignore:        r.FormValue(Ignore.string()),
