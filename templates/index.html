@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="light">
 <head>
     <meta charset="UTF-8">
     <title>Backup Plan UI</title>
@@ -7,21 +7,24 @@
     <script src="https://unpkg.com/htmx.org@1.9.12"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <link href="https://cdn.jsdelivr.net/npm/daisyui@5" rel="stylesheet" type="text/css" />
 </head>
 <body>
-    <h1>HumGen and GenGen backup plan</h1>
-
-    <div class="table-container">
-        <div class="table-actions">
-            <button class="btn primary"
+    <div class="p-6">
+        <div class="flex items-center justify-between">
+            <h1 class="text-4xl font-bold">HumGen and GenGen backup plan</h1>
+            <button class="btn btn-success"
                     hx-get="actions/add"
                     hx-target="#add-row-container"
                     hx-swap="innerHTML">
-                Add Row
+                Add Item
             </button>
         </div>
-        
-        <div id="add-row-container"></div>
+    </div>
+
+    <div class="table-container">
+        <div id="add-row-container" class="m-10"></div>
         
         <table class="table">
           <thead>

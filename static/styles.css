@@ -31,20 +31,6 @@ tr:hover {
     background-color: #f9f9f9;
 }
 
-button {
-    background-color: #3498db;
-    color: white;
-    border: none;
-    padding: 10px 15px;
-    border-radius: 4px;
-    cursor: pointer;
-    transition: background-color 0.3s;
-}
-
-button:hover {
-    background-color: #2980b9;
-}
-
 /* Table container and actions */
 .table-container {
     margin-top: 20px;
@@ -54,14 +40,6 @@ button:hover {
     margin-bottom: 15px;
     display: flex;
     justify-content: center;
-}
-
-.btn.primary {
-    background-color: #27ae60;
-}
-
-.btn.primary:hover {
-    background-color: #219955;
 }
 
 .btn.danger {

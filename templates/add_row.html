@@ -1,176 +1,265 @@
-<table class="table">
-  <thead>
-    <tr>
-      <th>
-        <div class="tooltip">Reporting name
-          <span class="tooltiptext right">A simple name that makes the report line easy to interpret.</span>
+<!--<table class="table">-->
+<!--  <thead>-->
+<!--    <tr>-->
+<!--      <th>-->
+<!--        <div class="tooltip">Reporting name-->
+<!--          <span class="tooltiptext right">A simple name that makes the report line easy to interpret.</span>-->
+<!--        </div>-->
+<!--      </th>-->
+<!--      <th>-->
+<!--        <div class="tooltip">Reporting root-->
+<!--          <span class="tooltiptext top">The lustre directory root for the report : typically full path to project or user folder (or subfolder, if appropriate).</span>-->
+<!--        </div>-->
+<!--      </th>-->
+<!--      <th>-->
+<!--        <div class="tooltip">Directory-->
+<!--          <span class="tooltiptext top">Full path to the folder where you want a backup or no backup to happen.</span>-->
+<!--        </div>-->
+<!--      </th>-->
+<!--      <th>-->
+<!--        <div class="tooltip">Instruction-->
+<!--          <span class="tooltiptext top">In the specified folder, do you want a backup, no backup, or a temp backup to happen? Temp means the backup is kept for 3 months.</span>-->
+<!--        </div>-->
+<!--      </th>-->
+<!--      <th>-->
+<!--        <div class="tooltip">Match-->
+<!--          <span class="tooltiptext top">Only back up the file paths in the folder that match the given expression(s), only available when instruction is 'backup'.</span>-->
+<!--        </div>-->
+<!--      </th>-->
+<!--      <th>-->
+<!--        <div class="tooltip">Ignore-->
+<!--          <span class="tooltiptext top">Never back up the file paths that match the given expression(s), only available when instruction is 'backup'.</span>-->
+<!--        </div>-->
+<!--      </th>-->
+<!--      <th>-->
+<!--        <div class="tooltip">Requestor-->
+<!--          <span class="tooltiptext top">User id of the person requesting the plan.</span>-->
+<!--        </div>-->
+<!--      </th>-->
+<!--      <th>-->
+<!--        <div class="tooltip">Faculty-->
+<!--          <span class="tooltiptext top">Faculty group / team of the person requesting the plan.</span>-->
+<!--        </div>-->
+<!--      </th>-->
+<!--      <th>Actions</th>-->
+<!--    </tr>-->
+<!--  </thead>-->
+<!--  <tbody>-->
+<!--    <tr hx-trigger='cancel' -->
+<!--        class='editing' -->
+<!--        hx-get="actions/cancel/new"-->
+<!--        hx-target="#add-row-container" -->
+<!--        hx-swap="innerHTML">-->
+<!--        <td>-->
+<!--          <div class="field-wrapper">-->
+<!--            <input autofocus name='ReportingName' value="{{.Entry.ReportingName}}" -->
+<!--              class="{{if index .Errors "ReportingName"}}input-error{{end}}">-->
+<!--            <div class="error-message">-->
+<!--              {{with index .Errors "ReportingName"}}{{.}}{{end}}-->
+<!--            </div>-->
+<!--          </div>-->
+<!--        </td>-->
+<!--        <td>-->
+<!--          <div class="field-wrapper">-->
+<!--            <input name='ReportingRoot' value="{{.Entry.ReportingRoot}}"-->
+<!--              class="{{if index .Errors "ReportingRoot"}}input-error{{end}}">-->
+<!--            <div class="error-message">-->
+<!--              {{with index .Errors "ReportingRoot"}}{{.}}{{end}}-->
+<!--            </div>-->
+<!--          </div>-->
+<!--        </td>-->
+<!--        <td>-->
+<!--          <div class="field-wrapper">-->
+<!--            <input name='Directory' value="{{.Entry.Directory}}"-->
+<!--            class="{{if index .Errors "Directory"}}input-error{{end}}">-->
+<!--            <div class="error-message">-->
+<!--              {{with index .Errors "Directory"}}{{.}}{{end}}-->
+<!--            </div>-->
+<!--          </div>-->
+<!--        </td>-->
+<!--        <td>-->
+<!--          <div class="field-wrapper">-->
+<!--            <select name="Instruction"-->
+<!--            class="{{if index .Errors "Instruction"}}input-error{{end}}">-->
+<!--                <option value="backup" {{if eq .Entry.Instruction "backup"}}selected{{end}}>backup</option>-->
+<!--                <option value="nobackup" {{if eq .Entry.Instruction "nobackup"}}selected{{end}}>nobackup</option>-->
+<!--                <option value="tempbackup" {{if eq .Entry.Instruction "tempbackup"}}selected{{end}}>tempbackup</option>-->
+<!--            </select>-->
+<!--            <div class="error-message">-->
+<!--              {{with index .Errors "Match"}}{{.}}{{end}}-->
+<!--            </div>-->
+<!--          </div>-->
+<!--        </td>-->
+<!--        <td>-->
+<!--          <div class="field-wrapper">  -->
+<!--            <div x-data="tagInputComponent('{{.Entry.Match}}'.split(' ').map(t => t.trim()).filter(Boolean), 'Match')">-->
+<!--              <div class="tag-container {{if index .Errors "Match"}}input-error{{end}}">-->
+<!--                  <template x-for="(tag, i) in tags" :key="i">-->
+<!--                    <div class="tag">-->
+<!--                      <span x-text="tag"></span>-->
+<!--                      <button type="button" @click="removeTag(i)">&times;</button>-->
+<!--                    </div>-->
+<!--                  </template>-->
+<!--                  <input-->
+<!--                    type="text"-->
+<!--                    x-model="newTag"-->
+<!--                    @keydown.enter.prevent="addTag"-->
+<!--                    @keydown.space.prevent="addTag"-->
+<!--                    @blur="addTag"-->
+<!--                    placeholder="..."-->
+<!--                  >-->
+<!--                </div>-->
+<!--                <input type="hidden" :name="name" :value="tags.join(' ')">-->
+<!--            </div>-->
+<!--            <div class="error-message">-->
+<!--              {{with index .Errors "Match"}}{{.}}{{end}}-->
+<!--            </div>-->
+<!--          </div>-->
+<!--        </td>-->
+<!--        <td>-->
+<!--          <div class="field-wrapper">   -->
+<!--            <div x-data="tagInputComponent('{{.Entry.Ignore}}'.split(' ').map(t => t.trim()).filter(Boolean), 'Ignore')">-->
+<!--                <div class="tag-container {{if index .Errors "Ignore"}}input-error{{end}}">-->
+<!--                  <template x-for="(tag, i) in tags" :key="i">-->
+<!--                    <div class="tag">-->
+<!--                      <span x-text="tag"></span>-->
+<!--                      <button type="button" @click="removeTag(i)">&times;</button>-->
+<!--                    </div>-->
+<!--                  </template>-->
+<!--                  <input-->
+<!--                    type="text"-->
+<!--                    x-model="newTag"-->
+<!--                    @keydown.enter.prevent="addTag"-->
+<!--                    @keydown.space.prevent="addTag"-->
+<!--                    @blur="addTag"-->
+<!--                    placeholder="..."-->
+<!--                  >-->
+<!--                </div>-->
+<!--                <input type="hidden" :name="name" :value="tags.join(' ')">-->
+<!--            </div>-->
+<!--            <div class="error-message">-->
+<!--              {{with index .Errors "Ignore"}}{{.}}{{end}}-->
+<!--            </div>-->
+<!--          </div>-->
+<!--        </td>-->
+<!--        <td>-->
+<!--          <div class="field-wrapper">  -->
+<!--            <input name='Requestor' value="{{.Entry.Requestor}}"-->
+<!--            class="{{if index .Errors "Requestor"}}input-error{{end}}">-->
+<!--            <div class="error-message">-->
+<!--              {{with index .Errors "Requestor"}}{{.}}{{end}}-->
+<!--            </div>-->
+<!--          </div>-->
+<!--        </td>-->
+<!--        <td>-->
+<!--          <div class="field-wrapper">  -->
+<!--            <input name='Faculty' value="{{.Entry.Faculty}}"-->
+<!--            class="{{if index .Errors "Faculty"}}input-error{{end}}">-->
+<!--            <div class="error-message">-->
+<!--              {{with index .Errors "Faculty"}}{{.}}{{end}}-->
+<!--            </div>-->
+<!--          </div>-->
+<!--        </td>-->
+<!--        <td>-->
+<!--            <button class="btn primary" title="submit row"-->
+<!--            hx-put="actions/add"-->
+<!--            hx-include="closest tr">-->
+<!--            <i class="fa-solid fa-check fa-lg"></i>-->
+<!--        </button>-->
+<!--        <button class="btn danger" title="cancel add"-->
+<!--            hx-get="actions/cancel/new">-->
+<!--            <i class="fa-solid fa-xmark fa-lg"></i>-->
+<!--        </button>-->
+<!--        </td>-->
+<!--    </tr>-->
+<!--  </tbody>-->
+<!--</table>-->
+
+<div class="card card-border bg-base-100 w-full shadow-md">
+    <div class="card-body">
+        <h2 class="card-title">A new backup plan item</h2>
+
+        <div class="grid grid-cols-2 gap-6">
+            <div class="flex flex-col">
+                <label class="label mb-1">Requestor</label>
+                <label class="input">
+                    <svg class="h-[1em] opacity-50" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                        <g
+                                stroke-linejoin="round"
+                                stroke-linecap="round"
+                                stroke-width="2.5"
+                                fill="none"
+                                stroke="currentColor"
+                        >
+                            <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"></path>
+                            <circle cx="12" cy="7" r="4"></circle>
+                        </g>
+                    </svg>
+                    <input
+                            type="text"
+                            required
+                            placeholder="Username"
+                            minlength="2"
+                    />
+                </label>
+                <p class="label mt-1">User id of the person requesting the plan</p>
+            </div>
+
+            <div class="flex flex-col">
+                <label class="label mb-1">Faculty</label>
+                <input
+                        type="text"
+                        class="input"
+                        required
+                        placeholder="Team name"
+                />
+                <p class="label mt-1">Faculty group / team of the person requesting the plan</p>
+            </div>
         </div>
-      </th>
-      <th>
-        <div class="tooltip">Reporting root
-          <span class="tooltiptext top">The lustre directory root for the report : typically full path to project or user folder (or subfolder, if appropriate).</span>
+
+        <div class="flex flex-col">
+            <label class="label mb-1">Reporting root</label>
+            <label class="input">
+                Path
+                <input
+                        type="text"
+                        class="grow"
+                        required
+                        placeholder="/"
+                        minlength="2"
+                />
+            </label>
+            <p class="label mt-1 whitespace-normal break-words">The lustre directory root for the report: typically full path to project or user folder (or subfolder, if appropriate)</p>
         </div>
-      </th>
-      <th>
-        <div class="tooltip">Directory
-          <span class="tooltiptext top">Full path to the folder where you want a backup or no backup to happen.</span>
+
+        <div class="flex flex-col">
+            <label class="label mb-1">Directory</label>
+            <label class="input">
+                Path
+                <input
+                        type="text"
+                        class="w-64"
+                        required
+                        placeholder="/"
+                />
+            </label>
+            <p class="label mt-1 whitespace-normal break-words">Full path to the folder where you want a backup or no backup to happen</p>
         </div>
-      </th>
-      <th>
-        <div class="tooltip">Instruction
-          <span class="tooltiptext top">In the specified folder, do you want a backup, no backup, or a temp backup to happen? Temp means the backup is kept for 3 months.</span>
+
+        <div class="card-actions justify-end">
+            <button class="btn btn-success btn-square"
+                    title="submit row"
+                hx-put="actions/add"
+                hx-include="closest tr">
+                <i class="fa-solid fa-check fa-lg"></i>
+            </button>
+            <button
+                class="btn btn-error btn-square"
+                title="cancel add"
+                hx-get="actions/cancel/new"
+                hx-target="#add-row-container">
+                <i class="fa-solid fa-xmark fa-lg"></i>
+            </button>
         </div>
-      </th>
-      <th>
-        <div class="tooltip">Match
-          <span class="tooltiptext top">Only back up the file paths in the folder that match the given expression(s), only available when instruction is 'backup'.</span>
-        </div>
-      </th>
-      <th>
-        <div class="tooltip">Ignore
-          <span class="tooltiptext top">Never back up the file paths that match the given expression(s), only available when instruction is 'backup'.</span>
-        </div>
-      </th>
-      <th>
-        <div class="tooltip">Requestor
-          <span class="tooltiptext top">User id of the person requesting the plan.</span>
-        </div>
-      </th>
-      <th>
-        <div class="tooltip">Faculty
-          <span class="tooltiptext top">Faculty group / team of the person requesting the plan.</span>
-        </div>
-      </th>
-      <th>Actions</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr hx-trigger='cancel' 
-        class='editing' 
-        hx-get="actions/cancel/new"
-        hx-target="#add-row-container" 
-        hx-swap="innerHTML">
-        <td>
-          <div class="field-wrapper">
-            <input autofocus name='ReportingName' value="{{.Entry.ReportingName}}" 
-              class="{{if index .Errors "ReportingName"}}input-error{{end}}">
-            <div class="error-message">
-              {{with index .Errors "ReportingName"}}{{.}}{{end}}
-            </div>
-          </div>
-        </td>
-        <td>
-          <div class="field-wrapper">
-            <input name='ReportingRoot' value="{{.Entry.ReportingRoot}}"
-              class="{{if index .Errors "ReportingRoot"}}input-error{{end}}">
-            <div class="error-message">
-              {{with index .Errors "ReportingRoot"}}{{.}}{{end}}
-            </div>
-          </div>
-        </td>
-        <td>
-          <div class="field-wrapper">
-            <input name='Directory' value="{{.Entry.Directory}}"
-            class="{{if index .Errors "Directory"}}input-error{{end}}">
-            <div class="error-message">
-              {{with index .Errors "Directory"}}{{.}}{{end}}
-            </div>
-          </div>
-        </td>
-        <td>
-          <div class="field-wrapper">
-            <select name="Instruction"
-            class="{{if index .Errors "Instruction"}}input-error{{end}}">
-                <option value="backup" {{if eq .Entry.Instruction "backup"}}selected{{end}}>backup</option>
-                <option value="nobackup" {{if eq .Entry.Instruction "nobackup"}}selected{{end}}>nobackup</option>
-                <option value="tempbackup" {{if eq .Entry.Instruction "tempbackup"}}selected{{end}}>tempbackup</option>
-            </select>
-            <div class="error-message">
-              {{with index .Errors "Match"}}{{.}}{{end}}
-            </div>
-          </div>
-        </td>
-        <td>
-          <div class="field-wrapper">  
-            <div x-data="tagInputComponent('{{.Entry.Match}}'.split(' ').map(t => t.trim()).filter(Boolean), 'Match')">
-              <div class="tag-container {{if index .Errors "Match"}}input-error{{end}}">
-                  <template x-for="(tag, i) in tags" :key="i">
-                    <div class="tag">
-                      <span x-text="tag"></span>
-                      <button type="button" @click="removeTag(i)">&times;</button>
-                    </div>
-                  </template>
-                  <input
-                    type="text"
-                    x-model="newTag"
-                    @keydown.enter.prevent="addTag"
-                    @keydown.space.prevent="addTag"
-                    @blur="addTag"
-                    placeholder="..."
-                  >
-                </div>
-                <input type="hidden" :name="name" :value="tags.join(' ')">
-            </div>
-            <div class="error-message">
-              {{with index .Errors "Match"}}{{.}}{{end}}
-            </div>
-          </div>
-        </td>
-        <td>
-          <div class="field-wrapper">   
-            <div x-data="tagInputComponent('{{.Entry.Ignore}}'.split(' ').map(t => t.trim()).filter(Boolean), 'Ignore')">
-                <div class="tag-container {{if index .Errors "Ignore"}}input-error{{end}}">
-                  <template x-for="(tag, i) in tags" :key="i">
-                    <div class="tag">
-                      <span x-text="tag"></span>
-                      <button type="button" @click="removeTag(i)">&times;</button>
-                    </div>
-                  </template>
-                  <input
-                    type="text"
-                    x-model="newTag"
-                    @keydown.enter.prevent="addTag"
-                    @keydown.space.prevent="addTag"
-                    @blur="addTag"
-                    placeholder="..."
-                  >
-                </div>
-                <input type="hidden" :name="name" :value="tags.join(' ')">
-            </div>
-            <div class="error-message">
-              {{with index .Errors "Ignore"}}{{.}}{{end}}
-            </div>
-          </div>
-        </td>
-        <td>
-          <div class="field-wrapper">  
-            <input name='Requestor' value="{{.Entry.Requestor}}"
-            class="{{if index .Errors "Requestor"}}input-error{{end}}">
-            <div class="error-message">
-              {{with index .Errors "Requestor"}}{{.}}{{end}}
-            </div>
-          </div>
-        </td>
-        <td>
-          <div class="field-wrapper">  
-            <input name='Faculty' value="{{.Entry.Faculty}}"
-            class="{{if index .Errors "Faculty"}}input-error{{end}}">
-            <div class="error-message">
-              {{with index .Errors "Faculty"}}{{.}}{{end}}
-            </div>
-          </div>
-        </td>
-        <td>
-            <button class="btn primary" title="submit row"
-            hx-put="actions/add"
-            hx-include="closest tr">
-            <i class="fa-solid fa-check fa-lg"></i>
-        </button>
-        <button class="btn danger" title="cancel add"
-            hx-get="actions/cancel/new">
-            <i class="fa-solid fa-xmark fa-lg"></i>
-        </button>
-        </td>
-    </tr>
-  </tbody>
-</table>
+    </div>
+</div>
