@@ -1,7 +1,6 @@
 package server
 
 import (
-	"github.com/wtsi-hgi/backup-plan-ui/sources"
 	"context"
 	"fmt"
 	"html/template"
@@ -12,6 +11,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/wtsi-hgi/backup-plan-ui/sources"
 
 	"github.com/go-chi/chi/v5"
 	. "github.com/smarty/assertions"
@@ -172,6 +173,24 @@ func TestSubmitEdits(t *testing.T) {
 			}
 		})
 	}
+
+	t.Run("You must provide a valid ID", func(t *testing.T) {
+		entry := *entryToEdit
+		entry.ID = 100
+
+		form := createFormFromEntry(entry)
+		req := makeFormRequest(form, fmt.Sprintf("/actions/submit/%d", entry.ID), fmt.Sprintf("%d", entry.ID))
+
+		w := httptest.NewRecorder()
+
+		s.SubmitEdits(w, req)
+
+		body := getBodyAndCheckStatusOK(t, w)
+
+		if ok, err := So(body, ShouldContainSubstring, "Entry missing"); !ok {
+			t.Error(err)
+		}
+	})
 }
 
 func TestDeleteRow(t *testing.T) {
@@ -228,16 +247,14 @@ func TestDeleteRow(t *testing.T) {
 		res := w.Result()
 		defer res.Body.Close()
 
-		if ok, err := So(res.StatusCode, ShouldEqual, http.StatusInternalServerError); !ok {
-			t.Error(err)
+		if res.StatusCode != http.StatusOK {
+			t.Fatalf("expected status 200, got %d", res.StatusCode)
 		}
 
-		errMsg, err := io.ReadAll(res.Body)
-		if ok, err := So(err, ShouldBeNil); !ok {
-			t.Fatal(err)
-		}
+		hxTrigger := res.Header.Get("HX-Trigger")
+		expectedTrigger := fmt.Sprintf(`{"entryMissing": {"id": %d}}`, sources.NumTestDataRows)
 
-		if ok, err := So(string(errMsg), ShouldContainSubstring, sources.ErrNoEntry.Error()); !ok {
+		if ok, err := So(hxTrigger, ShouldEqual, expectedTrigger); !ok {
 			t.Error(err)
 		}
 	})
