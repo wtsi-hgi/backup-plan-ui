@@ -107,8 +107,7 @@
         }
 
         document.body.addEventListener("entryMissing", (evt) => {
-            const id = evt.detail.id;
-            const row = document.querySelector(`tr[data-id="${id}"]`);
+            const row = document.querySelector(`tr[data-id="${evt.detail.id}"]`);
             if (row) {
                 row.innerHTML = `
                   <td colspan="9" style="color:red; cursor:pointer;" 
@@ -117,6 +116,10 @@
                   </td>
                 `;
             }
+        });
+
+        document.body.addEventListener("serverError", (evt) => {
+            alert("An error occurred:\n\n" + evt.detail.message);
         });
     </script>
 </body>

@@ -79,7 +79,10 @@ func (s Server) ServeHome(w http.ResponseWriter, _ *http.Request) {
 
 func (s Server) abortWithError(w http.ResponseWriter, err error, statusCode int) {
 	slog.Error(err.Error())
-	http.Error(w, err.Error(), statusCode)
+	w.Header().Set("HX-Trigger", fmt.Sprintf(`{"serverError": {"message": %q}}`, err.Error()))
+	w.WriteHeader(statusCode)
+
+	_, _ = w.Write([]byte(err.Error()))
 }
 
 func (s Server) GetEntries(w http.ResponseWriter, _ *http.Request) {
