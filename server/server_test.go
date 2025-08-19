@@ -176,7 +176,7 @@ func TestSubmitEdits(t *testing.T) {
 
 	t.Run("You must provide a valid ID", func(t *testing.T) {
 		entry := *entryToEdit
-		entry.ID = 100
+		entry.ID = sources.NumTestDataRows+100
 
 		form := createFormFromEntry(entry)
 		req := makeFormRequest(form, fmt.Sprintf("/actions/submit/%d", entry.ID), fmt.Sprintf("%d", entry.ID))
