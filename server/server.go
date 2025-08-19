@@ -108,7 +108,11 @@ func (s Server) AllowUserToEditRow(w http.ResponseWriter, r *http.Request) {
 func writeMissingRow(w http.ResponseWriter, id int) {
 	w.Header().Set("Content-Type", "text/html")
 	_, _ = w.Write([]byte(fmt.Sprintf(
-		`<tr data-id="%d"><td colspan="9" style="color:red;">Entry missing — please refresh the page.</td></tr>`,
+		`<tr data-id="%d" onclick="window.location.reload()">
+		  <td colspan="9" style="color:red; cursor:pointer;">
+		    Entry missing — click here to refresh.
+		  </td>
+		</tr>`,
 		id,
 	)))
 }
@@ -125,7 +129,7 @@ func (s Server) changeTemplate(w http.ResponseWriter, r *http.Request, tmplPath 
 	entry, err := s.db.GetEntry(uint16(id))
 	if err != nil {
 		onMissing(w, id)
-		
+
 		return nil
 	}
 
