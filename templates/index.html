@@ -105,7 +105,15 @@
             }
           }
         }
-      </script>
+
+        document.body.addEventListener("entryMissing", (evt) => {
+            const id = evt.detail.id;
+            const row = document.querySelector(`tr[data-id="${id}"]`);
+            if (row) {
+                row.innerHTML = '<td colspan="9" style="color:red;">Entry missing — please refresh the page.</td>';
+            }
+        });
+    </script>
 </body>
 </html>
 

@@ -2,6 +2,7 @@ package server
 
 import (
 	"embed"
+	"errors"
 	"fmt"
 	"html/template"
 	"log/slog"
@@ -98,13 +99,23 @@ func (s Server) GetEntries(w http.ResponseWriter, _ *http.Request) {
 }
 
 func (s Server) AllowUserToEditRow(w http.ResponseWriter, r *http.Request) {
-	err := s.changeTemplate(w, r, tmplEditRowPath)
+	err := s.changeTemplate(w, r, tmplEditRowPath, writeMissingRow)
 	if err != nil {
 		s.abortWithError(w, err, http.StatusBadRequest)
 	}
 }
 
-func (s Server) changeTemplate(w http.ResponseWriter, r *http.Request, tmplPath string) error {
+func writeMissingRow(w http.ResponseWriter, id int) {
+	w.Header().Set("Content-Type", "text/html")
+	_, _ = w.Write([]byte(fmt.Sprintf(
+		`<tr data-id="%d"><td colspan="9" style="color:red;">Entry missing — please refresh the page.</td></tr>`,
+		id,
+	)))
+}
+
+type missingEntryHandler func(w http.ResponseWriter, id int)
+
+func (s Server) changeTemplate(w http.ResponseWriter, r *http.Request, tmplPath string, onMissing missingEntryHandler) error {
 	idStr := chi.URLParam(r, "id")
 	id, err := strconv.Atoi(idStr)
 	if err != nil {
@@ -113,7 +124,9 @@ func (s Server) changeTemplate(w http.ResponseWriter, r *http.Request, tmplPath 
 
 	entry, err := s.db.GetEntry(uint16(id))
 	if err != nil {
-		return err
+		onMissing(w, id)
+		
+		return nil
 	}
 
 	return s.templates.ExecuteTemplate(w, tmplPath, tmplData{Entry: entry})
@@ -126,7 +139,7 @@ func (s Server) ResetView(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err := s.changeTemplate(w, r, tmplRowPath)
+	err := s.changeTemplate(w, r, tmplRowPath, writeMissingRow)
 	if err != nil {
 		s.abortWithError(w, err, http.StatusBadRequest)
 	}
@@ -167,6 +180,12 @@ func (s Server) SubmitEdits(w http.ResponseWriter, r *http.Request) {
 
 	err = s.db.UpdateEntry(updatedEntry)
 	if err != nil {
+		if errors.Is(err, sources.ErrNoEntry) {
+			writeMissingRow(w, id)
+
+			return
+		}
+
 		s.abortWithError(w, err, http.StatusInternalServerError)
 
 		return
@@ -212,6 +231,12 @@ func (s Server) DeleteRow(w http.ResponseWriter, r *http.Request) {
 
 	entry, err := s.db.DeleteEntry(uint16(id))
 	if err != nil {
+		if errors.Is(err, sources.ErrNoEntry) {
+			callTriggerForMissingEntry(w, id)
+
+			return
+		}
+
 		s.abortWithError(w, err, http.StatusInternalServerError)
 
 		return
@@ -230,6 +255,12 @@ func (s Server) DeleteRow(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		s.abortWithError(w, err, http.StatusInternalServerError)
 	}
+}
+
+func callTriggerForMissingEntry(w http.ResponseWriter, id int) {
+	w.Header().Set("Content-Type", "text/html")
+	w.Header().Set("HX-Trigger", fmt.Sprintf(`{"entryMissing": {"id": %d}}`, id))
+	_, _ = w.Write([]byte{})
 }
 
 func (s Server) ShowAddRowForm(w http.ResponseWriter, _ *http.Request) {
@@ -279,7 +310,7 @@ func (s Server) AddNewEntry(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s Server) OpenDeleteDialog(w http.ResponseWriter, r *http.Request) {
-	err := s.changeTemplate(w, r, tmplDeleteDialogPath)
+	err := s.changeTemplate(w, r, tmplDeleteDialogPath, callTriggerForMissingEntry)
 	if err != nil {
 		s.abortWithError(w, err, http.StatusBadRequest)
 	}
