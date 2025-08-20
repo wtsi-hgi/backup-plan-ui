@@ -105,7 +105,23 @@
             }
           }
         }
-      </script>
+
+        document.body.addEventListener("entryMissing", (evt) => {
+            const row = document.querySelector(`tr[data-id="${evt.detail.id}"]`);
+            if (row) {
+                row.innerHTML = `
+                  <td colspan="9" style="color:red; cursor:pointer;" 
+                      onclick="window.location.reload()">
+                      Entry missing — click here to refresh.
+                  </td>
+                `;
+            }
+        });
+
+        document.body.addEventListener("serverError", (evt) => {
+            alert("An error occurred:\n\n" + evt.detail.message);
+        });
+    </script>
 </body>
 </html>
 
