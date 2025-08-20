@@ -149,6 +149,10 @@ func (sq SQLSource) scanEntry(row scanner) (*Entry, error) {
 	err := row.Scan(&entry.ID, &entry.ReportingName, &entry.ReportingRoot, &entry.Directory,
 		&entry.Instruction, &entry.Match, &entry.Ignore, &entry.Requestor, &entry.Faculty)
 
+	if err != nil && errors.Is(err, sql.ErrNoRows) {
+		return nil, ErrNoEntry
+	}
+
 	return &entry, err
 }
 
@@ -190,9 +194,6 @@ func (sq SQLiteSource) DeleteEntry(id uint16) (*Entry, error) {
 	row := sq.db.QueryRow(stmt, id)
 
 	entry, err := sq.scanEntry(row)
-	if err != nil && errors.Is(err, sql.ErrNoRows) {
-		return nil, ErrNoEntry
-	}
 
 	return entry, err
 }
@@ -216,10 +217,6 @@ func (sq MySQLSource) DeleteEntry(id uint16) (*Entry, error) {
 
 	entry, err := sq.scanEntry(row)
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return nil, ErrNoEntry
-		}
-
 		return nil, err
 	}
 

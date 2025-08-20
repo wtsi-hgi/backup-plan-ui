@@ -39,6 +39,13 @@ func testDataSourceGetEntry(t *testing.T, ds DataSource, originalEntries []*Entr
 			t.Error(err)
 		}
 	}
+	
+	t.Run("Get non existing entry", func(t *testing.T) {
+		_, err := ds.GetEntry(NumTestDataRows + 100)
+		if ok, err := So(errors.Is(err, ErrNoEntry), ShouldBeTrue); !ok {
+			t.Error(err)
+		}
+	})
 }
 
 func testDataSourceUpdateEntry(t *testing.T, ds DataSource, originalEntries []*Entry) {

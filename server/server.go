@@ -131,9 +131,13 @@ func (s Server) changeTemplate(w http.ResponseWriter, r *http.Request, tmplPath 
 
 	entry, err := s.db.GetEntry(uint16(id))
 	if err != nil {
-		onMissing(w, id)
+		if errors.Is(err, sources.ErrNoEntry) {
+			onMissing(w, id)
 
-		return nil
+			return nil
+		}
+
+		return err
 	}
 
 	return s.templates.ExecuteTemplate(w, tmplPath, tmplData{Entry: entry})
