@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"log"
 	"os"
@@ -12,14 +13,39 @@ import (
 
 func usage() {
 	prog := filepath.Base(os.Args[0])
-	fmt.Println("Usage:")
-	fmt.Printf("  %s sqlite <path-to-csv> <path-to-sqlite>\n", prog)
-	fmt.Printf("  %s mysql <path-to-csv> [table-name]\n", prog)
+	fmt.Println("Add data from CSV to SQLite or MySQL database.")
+	fmt.Println("\nUsage:")
+	fmt.Printf("  %s sqlite --csv <path-to-csv> --sqlite <path-to-sqlite> [--drop]\n", prog)
+	fmt.Printf("  %s mysql --csv <path-to-csv> [--table table-name] [--drop]\n", prog)
 	fmt.Println("\nEnvironment (mysql): MYSQL_HOST, MYSQL_PORT, MYSQL_USER, MYSQL_PASS, MYSQL_DATABASE")
+	fmt.Println("\nFlags:")
+	flag.PrintDefaults()
+}
+
+var (
+	csvPath    string
+	sqlitePath string
+	tableName  string
+	dropTable  bool
+)
+
+func init() {
+	flag.StringVar(&csvPath, "csv", "", "Path to CSV file")
+	flag.StringVar(&sqlitePath, "sqlite", "", "Path to SQLite file")
+	flag.BoolVar(&dropTable, "drop", false, "Drop table before inserting data")
+	flag.StringVar(&tableName, "table", sources.DefaultTableName, "Name of table to insert data into")
 }
 
 func main() {
-	if len(os.Args) < 3 {
+	if len(os.Args) < 2 {
+		usage()
+		os.Exit(1)
+	}
+
+	flag.Usage = usage
+	flag.Parse()
+
+	if csvPath == "" {
 		usage()
 		os.Exit(1)
 	}
@@ -27,29 +53,16 @@ func main() {
 	mode := os.Args[1]
 	switch mode {
 	case "sqlite":
-		if len(os.Args) != 4 {
+		if sqlitePath == "" {
 			usage()
 			os.Exit(1)
 		}
 
-		csvPath := os.Args[2]
-		sqlitePath := os.Args[3]
 		if err := converter.ConvertCsvToSqlite(csvPath, sqlitePath); err != nil {
 			log.Fatalf("Conversion failed: %v", err)
 		}
 
 	case "mysql":
-		if len(os.Args) < 3 || len(os.Args) > 4 {
-			usage()
-			os.Exit(1)
-		}
-
-		csvPath := os.Args[2]
-		tableName := sources.DefaultTableName
-		if len(os.Args) == 4 && os.Args[3] != "" {
-			tableName = os.Args[3]
-		}
-
 		host := os.Getenv("MYSQL_HOST")
 		port := os.Getenv("MYSQL_PORT")
 		user := os.Getenv("MYSQL_USER")

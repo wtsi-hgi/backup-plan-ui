@@ -274,7 +274,7 @@ func (sq SQLSource) WriteEntries(entries []*Entry) error {
 }
 
 func (sq SQLSource) DropTable() error {
-	_, err := sq.db.Exec(fmt.Sprintf("DROP TABLE %s", sq.tableName))
+	_, err := sq.db.Exec(fmt.Sprintf("DROP TABLE IF EXISTS %s", sq.tableName))
 	return err
 }
 
