@@ -222,7 +222,7 @@ func (sq SQLiteSource) DeleteEntry(id uint16) (*Entry, error) {
 	return entry, err
 }
 
-func (sq MySQLSource) DeleteEntry(id uint16) (*Entry, error) {
+func (sq MySQLSource) DeleteEntry(id uint16) (entry *Entry, err error) {
 	tx, err := sq.db.Begin()
 	if err != nil {
 		return nil, err
@@ -239,7 +239,7 @@ func (sq MySQLSource) DeleteEntry(id uint16) (*Entry, error) {
 	getStmt := fmt.Sprintf(getEntryStmt, sq.tableName)
 	row := tx.QueryRow(getStmt, id)
 
-	entry, err := sq.scanEntry(row)
+	entry, err = sq.scanEntry(row)
 	if err != nil {
 		return nil, err
 	}
@@ -258,7 +258,7 @@ func (sq SQLSource) AddEntry(entry *Entry) error {
 	return sq.WriteEntries([]*Entry{entry})
 }
 
-func (sq SQLSource) WriteEntries(entries []*Entry) error {
+func (sq SQLSource) WriteEntries(entries []*Entry) (err error) {
 	tx, err := sq.db.Begin()
 	if err != nil {
 		return err
