@@ -1,16 +1,19 @@
 package server
 
 import (
-	"github.com/wtsi-hgi/backup-plan-ui/sources"
 	"net/http"
 	"path/filepath"
 	"strings"
+
+	"github.com/wtsi-hgi/backup-plan-ui/sources"
 )
 
 type FormValidator struct {
 	request *http.Request
 	errors  map[formField]string
 }
+
+type formValidationErrors map[formField]string
 
 const (
 	ErrBlankInput                 = "You cannot leave this field blank"
@@ -21,10 +24,10 @@ const (
 	ErrRootWithoutSlash           = "Reporting Root must start with a slash (/)"
 )
 
-func validateForm(r *http.Request) map[formField]string {
+func validateForm(r *http.Request) formValidationErrors {
 	fv := FormValidator{
 		request: r,
-		errors:  make(map[formField]string),
+		errors:  make(formValidationErrors),
 	}
 
 	fv.validateNonBlankInputs()
@@ -50,13 +53,12 @@ func (fv FormValidator) getFormValue(field formField) string {
 }
 
 func (fv FormValidator) validateInstructionAndIgnore() {
-	instr := sources.Instruction(fv.getFormValue(Instruction))
-	ignore := fv.getFormValue(Ignore)
-
-	if instr != sources.Backup && instr != sources.TempBackup && instr != sources.NoBackup {
+	instr, err := sources.ParseInstruction(fv.getFormValue(Instruction))
+	if err != nil {
 		fv.addErrorIfNew(Instruction, ErrInvalidInstruction)
 	}
 
+	ignore := fv.getFormValue(Ignore)
 	if ignore != "" && instr != sources.Backup {
 		fv.addErrorIfNew(Ignore, ErrIgnoreWithoutBackup)
 	}

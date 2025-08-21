@@ -26,16 +26,28 @@ type MySQLSource struct {
 
 const DefaultTableName = "entries"
 
-const createTableTmpl = `CREATE TABLE IF NOT EXISTS %s (
-	id INTEGER PRIMARY KEY %s,
+const createSQLiteTableTmpl = `CREATE TABLE IF NOT EXISTS %s (
+	id INTEGER PRIMARY KEY AUTOINCREMENT,
 	reporting_name TEXT,
 	reporting_root TEXT,
 	directory TEXT,
-	instruction TEXT CHECK ( instruction IN ('%s', '%s', '%s') ),
+	instruction TEXT CHECK ( instruction IN ('%s', '%s', '%s', '%s') ),
 	keep TEXT,
 	skip TEXT,
 	requestor TEXT,
 	faculty TEXT
+)`
+
+const createMySQLTableTmpl = `CREATE TABLE IF NOT EXISTS %s (
+	id INTEGER PRIMARY KEY AUTO_INCREMENT,
+	reporting_name TINYTEXT NOT NULL,
+	reporting_root MEDIUMTEXT NOT NULL,
+	directory MEDIUMTEXT NOT NULL,
+	instruction ENUM('%s', '%s', '%s', '%s') NOT NULL,
+	keep MEDIUMTEXT,
+	skip MEDIUMTEXT,
+	requestor VARCHAR(10) NOT NULL,
+	faculty VARCHAR(30) NOT NULL
 )`
 
 const (
@@ -115,18 +127,18 @@ func (sq SQLSource) Close() error {
 }
 
 func (sq SQLiteSource) CreateTable() error {
-	return sq.createTable("AUTOINCREMENT")
+	return sq.createTable(createSQLiteTableTmpl)
 }
 
-func (sq SQLSource) createTable(incrementTerm string) error {
-	createTableStmt := fmt.Sprintf(createTableTmpl, sq.tableName, incrementTerm, Backup, NoBackup, TempBackup)
+func (sq SQLSource) createTable(tmpl string) error {
+	createTableStmt := fmt.Sprintf(tmpl, sq.tableName, Backup, NoBackup, TempBackup, ManualBackup)
 	_, err := sq.db.Exec(createTableStmt)
 
 	return err
 }
 
 func (sq MySQLSource) CreateTable() error {
-	return sq.createTable("AUTO_INCREMENT")
+	return sq.createTable(createMySQLTableTmpl)
 }
 
 func (sq SQLSource) ReadAll() ([]*Entry, error) {
