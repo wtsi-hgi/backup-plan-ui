@@ -4,7 +4,6 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"log/slog"
 	"os"
 
 	_ "github.com/go-sql-driver/mysql"
@@ -65,13 +64,6 @@ const (
 )
 
 var ErrMissingArgument = errors.New("missing required argument")
-
-func (sq SQLSource) callAndLogError(f func() error) {
-	err := f()
-	if err != nil {
-		slog.Error(err.Error())
-	}
-}
 
 // NewSQLiteSource opens a connection to an SQLite database at the given path and stores it internally.
 // You are responsible to close the connection using Close().
@@ -147,7 +139,7 @@ func (sq SQLSource) ReadAll() ([]*Entry, error) {
 		return nil, err
 	}
 
-	defer sq.callAndLogError(rows.Close)
+	defer callAndLogError(rows.Close)
 
 	var entries []*Entry
 
@@ -230,7 +222,7 @@ func (sq MySQLSource) DeleteEntry(id uint16) (entry *Entry, err error) {
 
 	defer func() {
 		if err != nil {
-			sq.callAndLogError(tx.Rollback)
+			callAndLogError(tx.Rollback)
 		} else {
 			err = tx.Commit()
 		}
@@ -266,7 +258,7 @@ func (sq SQLSource) WriteEntries(entries []*Entry) (err error) {
 
 	defer func() {
 		if err != nil {
-			sq.callAndLogError(tx.Rollback)
+			callAndLogError(tx.Rollback)
 		} else {
 			err = tx.Commit()
 		}
@@ -276,7 +268,7 @@ func (sq SQLSource) WriteEntries(entries []*Entry) (err error) {
 	if err != nil {
 		return err
 	}
-	defer sq.callAndLogError(stmt.Close)
+	defer callAndLogError(stmt.Close)
 
 	for _, entry := range entries {
 		r, err := stmt.Exec(entry.ReportingName, entry.ReportingRoot, entry.Directory,
@@ -311,7 +303,7 @@ func (sq SQLSource) scanTableNames(stmt string) ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer sq.callAndLogError(rows.Close)
+	defer callAndLogError(rows.Close)
 
 	var tableName string
 	var tableNames []string

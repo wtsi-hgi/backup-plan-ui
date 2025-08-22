@@ -11,7 +11,7 @@ func TestParseInstruction(t *testing.T) {
 	for k, v := range instructionLookup {
 		term, err := ParseInstruction(k)
 
-		if ok, err := So(err, ShouldBeNil); !ok {
+		if err != nil {
 			t.Error(err)
 		}
 

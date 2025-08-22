@@ -3,6 +3,7 @@ package sources
 import (
 	"errors"
 	"fmt"
+	"log/slog"
 	"strings"
 )
 
@@ -53,3 +54,10 @@ type Entry struct {
 
 var ErrNoEntry = errors.New("entry does not exist")
 var ErrWrongInstruction = errors.New("wrong instruction")
+
+func callAndLogError(f func() error) {
+	err := f()
+	if err != nil {
+		slog.Error(err.Error())
+	}
+}

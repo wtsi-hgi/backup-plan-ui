@@ -102,6 +102,9 @@ func TestConvertCsvToMySQL(t *testing.T) {
 
 	t.Run("Check entries", func(t *testing.T) {
 		err = ConvertCsvToMySQL(csvPath, tableName, true)
+		if err != nil {
+			t.Fatal(err)
+		}
 
 		newEntries, err := sq.ReadAll()
 		if err != nil {

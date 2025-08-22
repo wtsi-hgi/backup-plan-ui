@@ -99,7 +99,7 @@ func TestSQLiteSource_WriteEntries(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer callAndLogError(t, sq.Close)
+	defer callAndLogTestError(t, sq.Close)
 
 	err = sq.CreateTable()
 	if err != nil {
@@ -130,7 +130,7 @@ func TestMySQLSource_WriteEntries(t *testing.T) {
 
 		t.Fatal(err)
 	}
-	defer callAndLogError(t, sq.Close)
+	defer callAndLogTestError(t, sq.Close)
 
 	err = sq.CreateTable()
 	if err != nil {
@@ -160,7 +160,7 @@ func TestSQLiteSource_CreateTable(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer callAndLogError(t, sq.Close)
+	defer callAndLogTestError(t, sq.Close)
 
 	err = sq.CreateTable()
 	if err != nil {
@@ -188,7 +188,7 @@ func TestMySQLSource_CreateTable(t *testing.T) {
 
 		t.Fatal(err)
 	}
-	defer callAndLogError(t, sq.Close)
+	defer callAndLogTestError(t, sq.Close)
 
 	err = sq.CreateTable()
 	if err != nil {
@@ -242,7 +242,7 @@ func setupSQLiteSourceForTest(t *testing.T) ([]*Entry, DataSource) {
 	entries, sq := createTestSQLiteTable(t)
 
 	cleanup := func() {
-		callAndLogError(t, sq.Close)
+		callAndLogTestError(t, sq.Close)
 	}
 
 	t.Cleanup(cleanup)
@@ -301,11 +301,11 @@ func setupMySQLSourceForTest(t *testing.T) ([]*Entry, DataSource) {
 func cleanupMySQL(t *testing.T, sq MySQLSource) {
 	t.Helper()
 
-	callAndLogError(t, sq.DropTable)
-	callAndLogError(t, sq.Close)
+	callAndLogTestError(t, sq.DropTable)
+	callAndLogTestError(t, sq.Close)
 }
 
-func callAndLogError(t *testing.T, f func() error) {
+func callAndLogTestError(t *testing.T, f func() error) {
 	t.Helper()
 
 	err := f()
