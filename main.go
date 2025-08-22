@@ -71,14 +71,7 @@ func parseArgs(args []string) sources.DataSource {
 
 	switch {
 	case backend == "mysql":
-		db, err = sources.NewMySQLSource(
-			os.Getenv("MYSQL_HOST"),
-			os.Getenv("MYSQL_PORT"),
-			os.Getenv("MYSQL_USER"),
-			os.Getenv("MYSQL_PASS"),
-			os.Getenv("MYSQL_DATABASE"),
-			sources.DefaultTableName,
-		)
+		db, err = sources.NewMySQLSourceFromEnv(sources.DefaultTableName)
 		msg = "Using MySQL database"
 	case len(args) == 1:
 		usage("Not enough arguments.")

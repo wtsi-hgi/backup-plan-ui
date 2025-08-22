@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"os"
 
 	_ "github.com/go-sql-driver/mysql"
 	_ "github.com/mattn/go-sqlite3"
@@ -66,6 +67,17 @@ func NewSQLiteSource(path string) (SQLiteSource, error) {
 	db, err := sql.Open("sqlite3", path)
 
 	return SQLiteSource{&SQLSource{db: db, tableName: DefaultTableName}}, err
+}
+
+func NewMySQLSourceFromEnv(tableName string) (MySQLSource, error) {
+	return NewMySQLSource(
+		os.Getenv("MYSQL_HOST"),
+		os.Getenv("MYSQL_PORT"),
+		os.Getenv("MYSQL_USER"),
+		os.Getenv("MYSQL_PASS"),
+		os.Getenv("MYSQL_DATABASE"),
+		tableName,
+	)
 }
 
 // NewMySQLSource opens a connection to a MySQL database using given credentials and stores it internally.

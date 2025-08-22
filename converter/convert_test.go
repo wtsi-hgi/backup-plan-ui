@@ -2,7 +2,6 @@ package converter
 
 import (
 	"errors"
-	"os"
 	"path/filepath"
 	"testing"
 
@@ -14,11 +13,6 @@ import (
 func TestConvertCsvToSqlite(t *testing.T) {
 	entries, csvPath := sources.CreateTestCSV(t)
 	sqlitePath := filepath.Join(t.TempDir(), "test.sqlite")
-
-	err := ConvertCsvToSqlite(csvPath, sqlitePath)
-	if err != nil {
-		t.Fatal(err)
-	}
 
 	sq, err := sources.NewSQLiteSource(sqlitePath)
 	if err != nil {
@@ -32,17 +26,51 @@ func TestConvertCsvToSqlite(t *testing.T) {
 		}
 	})
 
-	newEntries, err := sq.ReadAll()
-	if err != nil {
-		t.Fatal(err)
+	t.Run("Check entries", func(t *testing.T) {
+		err = ConvertCsvToSqlite(csvPath, sqlitePath, true)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		newEntries, err := sq.ReadAll()
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		for _, entry := range entries {
+			entry.ID += 1
+		}
+
+		if ok, e := So(newEntries, ShouldResemble, entries); !ok {
+			t.Error(e)
+		}
+	})
+
+	testCases := []struct {
+		name       string
+		dropTable  bool
+		numEntries int
+	}{
+		{"Keep table", false, 2 * len(entries)},
+		{"Overwrite table", true, len(entries)},
 	}
 
-	for _, entry := range entries {
-		entry.ID += 1
-	}
+	for _, tt := range testCases {
+		t.Run(tt.name, func(t *testing.T) {
+			err = ConvertCsvToSqlite(csvPath, sqlitePath, tt.dropTable)
+			if err != nil {
+				t.Fatal(err)
+			}
 
-	if ok, e := So(newEntries, ShouldResemble, entries); !ok {
-		t.Error(e)
+			newEntries, err := sq.ReadAll()
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			if ok, e := So(newEntries, ShouldHaveLength, tt.numEntries); !ok {
+				t.Error(e)
+			}
+		})
 	}
 }
 
@@ -51,14 +79,7 @@ func TestConvertCsvToMySQL(t *testing.T) {
 
 	tableName := "test_convert"
 
-	sq, err := sources.NewMySQLSource(
-		os.Getenv("MYSQL_HOST"),
-		os.Getenv("MYSQL_PORT"),
-		os.Getenv("MYSQL_USER"),
-		os.Getenv("MYSQL_PASS"),
-		os.Getenv("MYSQL_DATABASE"),
-		tableName,
-	)
+	sq, err := sources.NewMySQLSourceFromEnv(tableName)
 	if err != nil {
 		if errors.Is(err, sources.ErrMissingArgument) {
 			t.Skip("Skipping MySQL test because MySQL host, port, user, pass, or database is not set.")
@@ -79,26 +100,47 @@ func TestConvertCsvToMySQL(t *testing.T) {
 		}
 	})
 
-	err = ConvertCsvToMySQL(
-		csvPath,
-		os.Getenv("MYSQL_HOST"),
-		os.Getenv("MYSQL_PORT"),
-		os.Getenv("MYSQL_USER"),
-		os.Getenv("MYSQL_PASS"),
-		os.Getenv("MYSQL_DATABASE"),
-		tableName,
-	)
+	t.Run("Check entries", func(t *testing.T) {
+		err = ConvertCsvToMySQL(csvPath, tableName, true)
 
-	newEntries, err := sq.ReadAll()
-	if err != nil {
-		t.Fatal(err)
+		newEntries, err := sq.ReadAll()
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		for _, entry := range entries {
+			entry.ID += 1
+		}
+
+		if ok, e := So(newEntries, ShouldResemble, entries); !ok {
+			t.Error(e)
+		}
+	})
+
+	testCases := []struct {
+		name       string
+		dropTable  bool
+		numEntries int
+	}{
+		{"Keep table", false, 2 * len(entries)},
+		{"Overwrite table", true, len(entries)},
 	}
 
-	for _, entry := range entries {
-		entry.ID += 1
-	}
+	for _, tt := range testCases {
+		t.Run(tt.name, func(t *testing.T) {
+			err = ConvertCsvToMySQL(csvPath, tableName, tt.dropTable)
+			if err != nil {
+				t.Fatal(err)
+			}
 
-	if ok, e := So(newEntries, ShouldResemble, entries); !ok {
-		t.Error(e)
+			newEntries, err := sq.ReadAll()
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			if ok, e := So(newEntries, ShouldHaveLength, tt.numEntries); !ok {
+				t.Error(e)
+			}
+		})
 	}
 }

@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
-	"slices"
 	"strings"
 
 	. "github.com/wtsi-hgi/backup-plan-ui/sources"
@@ -12,7 +11,7 @@ import (
 
 var ErrWrongEntry = errors.New("wrong entry")
 
-func ConvertCsvToSqlite(csvPath, sqlitePath string) error {
+func ConvertCsvToSqlite(csvPath, sqlitePath string, dropTable bool) error {
 	csv := CSVSource{Path: csvPath}
 	entries, err := csv.ReadAll()
 	if err != nil {
@@ -38,6 +37,13 @@ func ConvertCsvToSqlite(csvPath, sqlitePath string) error {
 		}
 	}()
 
+	if dropTable {
+		err = sq.DropTable()
+		if err != nil {
+			return err
+		}
+	}
+
 	err = sq.CreateTable()
 	if err != nil {
 		return err
@@ -61,7 +67,7 @@ func fixEntry(e *Entry) error {
 	return nil
 }
 
-func ConvertCsvToMySQL(csvPath, host, port, user, password, database, tableName string) error {
+func ConvertCsvToMySQL(csvPath, tableName string, dropTable bool) error {
 	csv := CSVSource{Path: csvPath}
 	entries, err := csv.ReadAll()
 	if err != nil {
@@ -75,7 +81,7 @@ func ConvertCsvToMySQL(csvPath, host, port, user, password, database, tableName 
 		}
 	}
 
-	sq, err := NewMySQLSource(host, port, user, password, database, tableName)
+	sq, err := NewMySQLSourceFromEnv(tableName)
 	if err != nil {
 		return err
 	}
@@ -87,12 +93,7 @@ func ConvertCsvToMySQL(csvPath, host, port, user, password, database, tableName 
 		}
 	}()
 
-	tables, err := sq.ShowTables()
-	if err != nil {
-		return err
-	}
-
-	if slices.Contains(tables, tableName) {
+	if dropTable {
 		err = sq.DropTable()
 		if err != nil {
 			return err
