@@ -15,8 +15,8 @@ func usage() {
 	prog := filepath.Base(os.Args[0])
 	fmt.Println("Add data from CSV to SQLite or MySQL database.")
 	fmt.Println("\nUsage:")
-	fmt.Printf("  %s -b sqlite --csv <path-to-csv> --sqlite <path-to-sqlite> [--drop]\n", prog)
-	fmt.Printf("  %s -b mysql --csv <path-to-csv> [--table table-name] [--drop]\n", prog)
+	fmt.Printf("  %s -b sqlite --csv <path-to-csv> --sqlite <path-to-sqlite> [--replace]\n", prog)
+	fmt.Printf("  %s -b mysql --csv <path-to-csv> [--table table-name] [--replace]\n", prog)
 	fmt.Println("\nEnvironment (mysql): MYSQL_HOST, MYSQL_PORT, MYSQL_USER, MYSQL_PASS, MYSQL_DATABASE")
 	fmt.Println("\nFlags:")
 	flag.PrintDefaults()
@@ -34,7 +34,7 @@ func init() {
 	flag.StringVar(&backend, "b", "", "Backend to use (sqlite or mysql)")
 	flag.StringVar(&csvPath, "csv", "", "Path to CSV file")
 	flag.StringVar(&sqlitePath, "sqlite", "", "Path to SQLite file")
-	flag.BoolVar(&dropTable, "drop", false, "Drop table before inserting data")
+	flag.BoolVar(&dropTable, "replace", false, "Remove existing data before inserting new data")
 	flag.StringVar(&tableName, "table", sources.DefaultTableName, "Name of table to insert data into")
 
 	flag.Usage = usage
