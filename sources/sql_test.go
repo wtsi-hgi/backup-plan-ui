@@ -3,7 +3,6 @@ package sources
 import (
 	"errors"
 	"log"
-	"os"
 	"path/filepath"
 	"testing"
 
@@ -123,14 +122,7 @@ func TestSQLiteSource_WriteEntries(t *testing.T) {
 func TestMySQLSource_WriteEntries(t *testing.T) {
 	tableName := "entries_test"
 
-	sq, err := NewMySQLSource(
-		os.Getenv("MYSQL_HOST"),
-		os.Getenv("MYSQL_PORT"),
-		os.Getenv("MYSQL_USER"),
-		os.Getenv("MYSQL_PASS"),
-		os.Getenv("MYSQL_DATABASE"),
-		tableName,
-	)
+	sq, err := NewMySQLSourceFromEnv(tableName)
 	if err != nil {
 		if errors.Is(err, ErrMissingArgument) {
 			t.Skip("Skipping MySQL test because MySQL host, port, user, pass, or database is not set.")
@@ -188,14 +180,7 @@ func TestSQLiteSource_CreateTable(t *testing.T) {
 func TestMySQLSource_CreateTable(t *testing.T) {
 	tableName := "test_create_table"
 
-	sq, err := NewMySQLSource(
-		os.Getenv("MYSQL_HOST"),
-		os.Getenv("MYSQL_PORT"),
-		os.Getenv("MYSQL_USER"),
-		os.Getenv("MYSQL_PASS"),
-		os.Getenv("MYSQL_DATABASE"),
-		tableName,
-	)
+	sq, err := NewMySQLSourceFromEnv(tableName)
 	if err != nil {
 		if errors.Is(err, ErrMissingArgument) {
 			t.Skip("Skipping MySQL test because MySQL host, port, user, pass, or database is not set.")
@@ -277,14 +262,7 @@ func createTestMySQLTable(t *testing.T) ([]*Entry, MySQLSource, string) {
 
 	tableName := "entries_test"
 
-	sq, err := NewMySQLSource(
-		os.Getenv("MYSQL_HOST"),
-		os.Getenv("MYSQL_PORT"),
-		os.Getenv("MYSQL_USER"),
-		os.Getenv("MYSQL_PASS"),
-		os.Getenv("MYSQL_DATABASE"),
-		tableName,
-	)
+	sq, err := NewMySQLSourceFromEnv(tableName)
 	if err != nil {
 		if errors.Is(err, ErrMissingArgument) {
 			t.Skip("Skipping MySQL test because MySQL host, port, user, pass, or database is not set.")

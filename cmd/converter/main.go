@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"log"
 	"os"
@@ -12,57 +13,57 @@ import (
 
 func usage() {
 	prog := filepath.Base(os.Args[0])
-	fmt.Println("Usage:")
-	fmt.Printf("  %s sqlite <path-to-csv> <path-to-sqlite>\n", prog)
-	fmt.Printf("  %s mysql <path-to-csv> [table-name]\n", prog)
+	fmt.Println("Add data from CSV to SQLite or MySQL database.")
+	fmt.Println("\nUsage:")
+	fmt.Printf("  %s -b sqlite --csv <path-to-csv> --sqlite <path-to-sqlite> [--replace]\n", prog)
+	fmt.Printf("  %s -b mysql --csv <path-to-csv> [--table table-name] [--replace]\n", prog)
 	fmt.Println("\nEnvironment (mysql): MYSQL_HOST, MYSQL_PORT, MYSQL_USER, MYSQL_PASS, MYSQL_DATABASE")
+	fmt.Println("\nFlags:")
+	flag.PrintDefaults()
+}
+
+var (
+	backend    string
+	csvPath    string
+	sqlitePath string
+	tableName  string
+	dropTable  bool
+)
+
+func init() {
+	flag.StringVar(&backend, "b", "", "Backend to use (sqlite or mysql)")
+	flag.StringVar(&csvPath, "csv", "", "Path to CSV file")
+	flag.StringVar(&sqlitePath, "sqlite", "", "Path to SQLite file")
+	flag.BoolVar(&dropTable, "replace", false, "Remove existing data before inserting new data")
+	flag.StringVar(&tableName, "table", sources.DefaultTableName, "Name of table to insert data into")
+
+	flag.Usage = usage
 }
 
 func main() {
-	if len(os.Args) < 3 {
-		usage()
-		os.Exit(1)
+	flag.Parse()
+
+	if csvPath == "" {
+		log.Fatalf("You must specify a CSV file.")
 	}
 
-	mode := os.Args[1]
-	switch mode {
+	switch backend {
 	case "sqlite":
-		if len(os.Args) != 4 {
-			usage()
-			os.Exit(1)
+		if sqlitePath == "" {
+			log.Fatalf("You must specify a SQLite file.")
 		}
 
-		csvPath := os.Args[2]
-		sqlitePath := os.Args[3]
-		if err := converter.ConvertCsvToSqlite(csvPath, sqlitePath); err != nil {
+		if err := converter.ConvertCsvToSqlite(csvPath, sqlitePath, dropTable); err != nil {
 			log.Fatalf("Conversion failed: %v", err)
 		}
 
 	case "mysql":
-		if len(os.Args) < 3 || len(os.Args) > 4 {
-			usage()
-			os.Exit(1)
-		}
-
-		csvPath := os.Args[2]
-		tableName := sources.DefaultTableName
-		if len(os.Args) == 4 && os.Args[3] != "" {
-			tableName = os.Args[3]
-		}
-
-		host := os.Getenv("MYSQL_HOST")
-		port := os.Getenv("MYSQL_PORT")
-		user := os.Getenv("MYSQL_USER")
-		pass := os.Getenv("MYSQL_PASS")
-		db := os.Getenv("MYSQL_DATABASE")
-
-		if err := converter.ConvertCsvToMySQL(csvPath, host, port, user, pass, db, tableName); err != nil {
+		if err := converter.ConvertCsvToMySQL(csvPath, tableName, dropTable); err != nil {
 			log.Fatalf("Conversion failed: %v", err)
 		}
 
 	default:
-		usage()
-		os.Exit(1)
+		log.Fatalf("Invalid backend: %s", backend)
 	}
 
 	fmt.Println("Data conversion was successful.")
