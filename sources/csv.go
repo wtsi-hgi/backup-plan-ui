@@ -16,9 +16,9 @@ func (c CSVSource) ReadAll() ([]*Entry, error) {
 		return nil, err
 	}
 
-	defer in.Close()
+	defer callAndLogError(in.Close)
 
-	entries := []*Entry{}
+	var entries []*Entry
 
 	err = gocsv.UnmarshalFile(in, &entries)
 
@@ -68,7 +68,7 @@ func (c CSVSource) writeEntries(entries []*Entry) error {
 		return err
 	}
 
-	defer out.Close()
+	defer callAndLogError(out.Close)
 
 	return gocsv.MarshalFile(&entries, out)
 }

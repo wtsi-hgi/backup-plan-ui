@@ -35,8 +35,9 @@
         <select name="Instruction"
         class="{{if index .Errors "Instruction"}}input-error{{end}}">
             <option value="backup" {{if eq .Entry.Instruction "backup"}}selected{{end}}>backup</option>
-            <option value="nobackup" {{if eq .Entry.Instruction "nobackup"}}selected{{end}}>nobackup</option>
             <option value="tempbackup" {{if eq .Entry.Instruction "tempbackup"}}selected{{end}}>tempbackup</option>
+            <option value="nobackup" {{if eq .Entry.Instruction "nobackup"}}selected{{end}}>nobackup</option>
+            <option value="manual backup" {{if eq .Entry.Instruction "manual backup"}}selected{{end}}>manual backup</option>
         </select>
         <div class="error-message">
           {{with index .Errors "Match"}}{{.}}{{end}}

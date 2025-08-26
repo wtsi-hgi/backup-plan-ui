@@ -7,6 +7,25 @@ import (
 	. "github.com/smarty/assertions"
 )
 
+func TestParseInstruction(t *testing.T) {
+	for k, v := range instructionLookup {
+		term, err := ParseInstruction(k)
+
+		if err != nil {
+			t.Error(err)
+		}
+
+		if ok, err := So(term, ShouldEqual, v); !ok {
+			t.Error(err)
+		}
+
+		_, err = ParseInstruction("invalid")
+		if ok, err := So(errors.Is(err, ErrWrongInstruction), ShouldBeTrue); !ok {
+			t.Error(err)
+		}
+	}
+}
+
 func testDataSourceReadAll(t *testing.T, ds DataSource, originalEntries []*Entry) {
 	t.Helper()
 
@@ -39,7 +58,7 @@ func testDataSourceGetEntry(t *testing.T, ds DataSource, originalEntries []*Entr
 			t.Error(err)
 		}
 	}
-	
+
 	t.Run("Get non existing entry", func(t *testing.T) {
 		_, err := ds.GetEntry(NumTestDataRows + 100)
 		if ok, err := So(errors.Is(err, ErrNoEntry), ShouldBeTrue); !ok {

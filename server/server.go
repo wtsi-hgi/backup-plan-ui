@@ -172,8 +172,7 @@ func (s Server) SubmitEdits(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	validationErrors := validateForm(r)
-	updatedEntry := createEntryFromForm(uint16(id), r)
+	updatedEntry, validationErrors := createEntryFromForm(uint16(id), r)
 
 	if len(validationErrors) > 0 {
 		data := tmplData{
@@ -207,18 +206,25 @@ func (s Server) SubmitEdits(w http.ResponseWriter, r *http.Request) {
 	s.ResetView(w, r)
 }
 
-func createEntryFromForm(id uint16, r *http.Request) *sources.Entry {
+func createEntryFromForm(id uint16, r *http.Request) (*sources.Entry, formValidationErrors) {
+	validationErrors := validateForm(r)
+	if len(validationErrors) > 0 {
+		return nil, validationErrors
+	}
+
+	instruction, _ := sources.ParseInstruction(r.FormValue(Instruction.string()))
+
 	return &sources.Entry{
 		ID:            id,
 		ReportingName: r.FormValue(ReportingName.string()),
 		ReportingRoot: r.FormValue(ReportingRoot.string()),
 		Directory:     r.FormValue(Directory.string()),
-		Instruction:   sources.Instruction(r.FormValue(Instruction.string())),
+		Instruction:   instruction,
 		Match:         r.FormValue(Match.string()),
 		Ignore:        r.FormValue(Ignore.string()),
 		Requestor:     r.FormValue(Requestor.string()),
 		Faculty:       r.FormValue(Faculty.string()),
-	}
+	}, nil
 }
 
 func convertErrors(errs map[formField]string) map[string]string {
@@ -289,10 +295,8 @@ func (s Server) AddNewEntry(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	validationErrors := validateForm(r)
-
 	var dummyEntryID uint16 // will be set later
-	newEntry := createEntryFromForm(dummyEntryID, r)
+	newEntry, validationErrors := createEntryFromForm(dummyEntryID, r)
 
 	if len(validationErrors) > 0 {
 		data := tmplData{

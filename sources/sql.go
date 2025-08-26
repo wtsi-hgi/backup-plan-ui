@@ -4,7 +4,6 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"log/slog"
 	"os"
 
 	_ "github.com/go-sql-driver/mysql"
@@ -26,16 +25,28 @@ type MySQLSource struct {
 
 const DefaultTableName = "entries"
 
-const createTableTmpl = `CREATE TABLE IF NOT EXISTS %s (
-	id INTEGER PRIMARY KEY %s,
+const createSQLiteTableTmpl = `CREATE TABLE IF NOT EXISTS %s (
+	id INTEGER PRIMARY KEY AUTOINCREMENT,
 	reporting_name TEXT,
 	reporting_root TEXT,
 	directory TEXT,
-	instruction TEXT CHECK ( instruction IN ('%s', '%s', '%s') ),
+	instruction TEXT CHECK ( instruction IN ('%s', '%s', '%s', '%s') ),
 	keep TEXT,
 	skip TEXT,
 	requestor TEXT,
 	faculty TEXT
+)`
+
+const createMySQLTableTmpl = `CREATE TABLE IF NOT EXISTS %s (
+	id INTEGER PRIMARY KEY AUTO_INCREMENT,
+	reporting_name TINYTEXT NOT NULL,
+	reporting_root MEDIUMTEXT NOT NULL,
+	directory MEDIUMTEXT NOT NULL,
+	instruction ENUM('%s', '%s', '%s', '%s') NOT NULL,
+	keep MEDIUMTEXT,
+	skip MEDIUMTEXT,
+	requestor VARCHAR(10) NOT NULL,
+	faculty VARCHAR(30) NOT NULL
 )`
 
 const (
@@ -53,13 +64,6 @@ const (
 )
 
 var ErrMissingArgument = errors.New("missing required argument")
-
-func (sq SQLSource) callAndLogError(f func() error) {
-	err := f()
-	if err != nil {
-		slog.Error(err.Error())
-	}
-}
 
 // NewSQLiteSource opens a connection to an SQLite database at the given path and stores it internally.
 // You are responsible to close the connection using Close().
@@ -115,18 +119,18 @@ func (sq SQLSource) Close() error {
 }
 
 func (sq SQLiteSource) CreateTable() error {
-	return sq.createTable("AUTOINCREMENT")
+	return sq.createTable(createSQLiteTableTmpl)
 }
 
-func (sq SQLSource) createTable(incrementTerm string) error {
-	createTableStmt := fmt.Sprintf(createTableTmpl, sq.tableName, incrementTerm, Backup, NoBackup, TempBackup)
+func (sq SQLSource) createTable(tmpl string) error {
+	createTableStmt := fmt.Sprintf(tmpl, sq.tableName, Backup, NoBackup, TempBackup, ManualBackup)
 	_, err := sq.db.Exec(createTableStmt)
 
 	return err
 }
 
 func (sq MySQLSource) CreateTable() error {
-	return sq.createTable("AUTO_INCREMENT")
+	return sq.createTable(createMySQLTableTmpl)
 }
 
 func (sq SQLSource) ReadAll() ([]*Entry, error) {
@@ -135,7 +139,7 @@ func (sq SQLSource) ReadAll() ([]*Entry, error) {
 		return nil, err
 	}
 
-	defer sq.callAndLogError(rows.Close)
+	defer callAndLogError(rows.Close)
 
 	var entries []*Entry
 
@@ -210,7 +214,7 @@ func (sq SQLiteSource) DeleteEntry(id uint16) (*Entry, error) {
 	return entry, err
 }
 
-func (sq MySQLSource) DeleteEntry(id uint16) (*Entry, error) {
+func (sq MySQLSource) DeleteEntry(id uint16) (entry *Entry, err error) {
 	tx, err := sq.db.Begin()
 	if err != nil {
 		return nil, err
@@ -218,7 +222,7 @@ func (sq MySQLSource) DeleteEntry(id uint16) (*Entry, error) {
 
 	defer func() {
 		if err != nil {
-			sq.callAndLogError(tx.Rollback)
+			callAndLogError(tx.Rollback)
 		} else {
 			err = tx.Commit()
 		}
@@ -227,7 +231,7 @@ func (sq MySQLSource) DeleteEntry(id uint16) (*Entry, error) {
 	getStmt := fmt.Sprintf(getEntryStmt, sq.tableName)
 	row := tx.QueryRow(getStmt, id)
 
-	entry, err := sq.scanEntry(row)
+	entry, err = sq.scanEntry(row)
 	if err != nil {
 		return nil, err
 	}
@@ -246,7 +250,7 @@ func (sq SQLSource) AddEntry(entry *Entry) error {
 	return sq.WriteEntries([]*Entry{entry})
 }
 
-func (sq SQLSource) WriteEntries(entries []*Entry) error {
+func (sq SQLSource) WriteEntries(entries []*Entry) (err error) {
 	tx, err := sq.db.Begin()
 	if err != nil {
 		return err
@@ -254,7 +258,7 @@ func (sq SQLSource) WriteEntries(entries []*Entry) error {
 
 	defer func() {
 		if err != nil {
-			sq.callAndLogError(tx.Rollback)
+			callAndLogError(tx.Rollback)
 		} else {
 			err = tx.Commit()
 		}
@@ -264,7 +268,7 @@ func (sq SQLSource) WriteEntries(entries []*Entry) error {
 	if err != nil {
 		return err
 	}
-	defer sq.callAndLogError(stmt.Close)
+	defer callAndLogError(stmt.Close)
 
 	for _, entry := range entries {
 		r, err := stmt.Exec(entry.ReportingName, entry.ReportingRoot, entry.Directory,
@@ -299,7 +303,7 @@ func (sq SQLSource) scanTableNames(stmt string) ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer sq.callAndLogError(rows.Close)
+	defer callAndLogError(rows.Close)
 
 	var tableName string
 	var tableNames []string

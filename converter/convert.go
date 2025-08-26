@@ -53,16 +53,16 @@ func ConvertCsvToSqlite(csvPath, sqlitePath string, dropTable bool) error {
 }
 
 func fixEntry(e *Entry) error {
-	e.Instruction = Instruction(strings.Trim(string(e.Instruction), " "))
-
-	if e.Instruction != Backup && e.Instruction != NoBackup && e.Instruction != TempBackup {
-		return fmt.Errorf("%w: invalid instruction for entry %+v", ErrWrongEntry, e)
+	term, err := ParseInstruction(string(e.Instruction))
+	if err != nil {
+		return fmt.Errorf("%w: %v", ErrWrongEntry, err)
 	}
 
-	e.Match = strings.Trim(e.Match, " ")
-	e.Ignore = strings.Trim(e.Ignore, " ")
-	e.Requestor = strings.Trim(e.Requestor, " ")
-	e.Faculty = strings.Trim(e.Faculty, " ")
+	e.Instruction = term
+	e.Match = strings.TrimSpace(e.Match)
+	e.Ignore = strings.TrimSpace(e.Ignore)
+	e.Requestor = strings.TrimSpace(e.Requestor)
+	e.Faculty = strings.TrimSpace(e.Faculty)
 
 	return nil
 }
