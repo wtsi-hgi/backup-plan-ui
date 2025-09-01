@@ -33,6 +33,63 @@ func TestShowAddRowForm(t *testing.T) {
 	}
 }
 
+func TestAddNewEntry(t *testing.T) {
+	s, originalEntries := createServer(t)
+
+	newEntry := *originalEntries[0]
+
+	t.Run("Valid entry", func(t *testing.T) {
+		newEntry.ReportingName = "New Project"
+		form := createFormFromEntry(newEntry)
+		req := makeFormRequest(form, "/actions/add", "0")
+
+		w := httptest.NewRecorder()
+
+		s.AddNewEntry(w, req)
+
+		body := getBodyAndCheckStatusOK(t, w)
+		if ok, err := So(body, ShouldBeBlank); !ok {
+			t.Error(err)
+		}
+
+		res := w.Result()
+		defer callAndLogError(res.Body.Close)
+
+		hxTrigger := res.Header.Get("HX-Trigger")
+		if ok, err := So(hxTrigger, ShouldEqual, "entriesChanged"); !ok {
+			t.Error(err)
+		}
+
+		entries, err := s.db.ReadAll()
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if ok, err := So(entries, ShouldHaveLength, len(originalEntries)+1); !ok {
+			t.Error(err)
+		}
+	})
+
+	t.Run("Invalid entry", func(t *testing.T) {
+		newEntry.ReportingName = ""
+		form := createFormFromEntry(newEntry)
+		req := makeFormRequest(form, "/actions/add", "0")
+
+		w := httptest.NewRecorder()
+
+		s.AddNewEntry(w, req)
+
+		body := getBodyAndCheckStatusOK(t, w)
+		if ok, err := So(body, ShouldContainSubstring, ErrBlankInput); !ok {
+			t.Error(err)
+		}
+
+		if ok, err := So(body, ShouldContainSubstring, newEntry.Directory); !ok {
+			t.Error(err)
+		}
+	})
+}
+
 func TestGetEntries(t *testing.T) {
 	s, originalEntries := createServer(t)
 
@@ -174,9 +231,30 @@ func TestSubmitEdits(t *testing.T) {
 		})
 	}
 
+	t.Run("Invalid entry", func(t *testing.T) {
+		entry := *entryToEdit
+		entry.ReportingName = ""
+
+		form := createFormFromEntry(entry)
+		req := makeFormRequest(form, fmt.Sprintf("/actions/submit/%d", entry.ID), fmt.Sprintf("%d", entry.ID))
+
+		w := httptest.NewRecorder()
+
+		s.SubmitEdits(w, req)
+
+		body := getBodyAndCheckStatusOK(t, w)
+		if ok, err := So(body, ShouldContainSubstring, ErrBlankInput); !ok {
+			t.Error(err)
+		}
+
+		if ok, err := So(body, ShouldContainSubstring, entry.Directory); !ok {
+			t.Error(err)
+		}
+	})
+
 	t.Run("You must provide a valid ID", func(t *testing.T) {
 		entry := *entryToEdit
-		entry.ID = sources.NumTestDataRows+100
+		entry.ID = sources.NumTestDataRows + 100
 
 		form := createFormFromEntry(entry)
 		req := makeFormRequest(form, fmt.Sprintf("/actions/submit/%d", entry.ID), fmt.Sprintf("%d", entry.ID))
@@ -227,7 +305,7 @@ func TestDeleteRow(t *testing.T) {
 		s.DeleteRow(w, r)
 
 		res := w.Result()
-		defer res.Body.Close()
+		defer callAndLogError(res.Body.Close)
 
 		if ok, err := So(res.StatusCode, ShouldEqual, http.StatusBadRequest); !ok {
 			t.Error(err)
@@ -245,7 +323,7 @@ func TestDeleteRow(t *testing.T) {
 		s.DeleteRow(w, r)
 
 		res := w.Result()
-		defer res.Body.Close()
+		defer callAndLogError(res.Body.Close)
 
 		if res.StatusCode != http.StatusOK {
 			t.Fatalf("expected status 200, got %d", res.StatusCode)
@@ -479,7 +557,7 @@ func createServer(t *testing.T) (Server, []*sources.Entry) {
 
 func getBodyAndCheckStatusOK(t *testing.T, w *httptest.ResponseRecorder) string {
 	res := w.Result()
-	defer res.Body.Close()
+	defer callAndLogError(res.Body.Close)
 
 	if ok, err := So(res.StatusCode, ShouldEqual, http.StatusOK); !ok {
 		t.Error(err)

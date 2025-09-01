@@ -208,13 +208,9 @@ func (s Server) SubmitEdits(w http.ResponseWriter, r *http.Request) {
 
 func createEntryFromForm(id uint16, r *http.Request) (*sources.Entry, formValidationErrors) {
 	validationErrors := validateForm(r)
-	if len(validationErrors) > 0 {
-		return nil, validationErrors
-	}
 
 	instruction, _ := sources.ParseInstruction(r.FormValue(Instruction.string()))
-
-	return &sources.Entry{
+	entry := sources.Entry{
 		ID:            id,
 		ReportingName: r.FormValue(ReportingName.string()),
 		ReportingRoot: r.FormValue(ReportingRoot.string()),
@@ -224,7 +220,9 @@ func createEntryFromForm(id uint16, r *http.Request) (*sources.Entry, formValida
 		Ignore:        r.FormValue(Ignore.string()),
 		Requestor:     r.FormValue(Requestor.string()),
 		Faculty:       r.FormValue(Faculty.string()),
-	}, nil
+	}
+
+	return &entry, validationErrors
 }
 
 func convertErrors(errs map[formField]string) map[string]string {
@@ -371,4 +369,11 @@ func RemovePrefix(path, prefix string) string {
 	}
 
 	return "<reporting root>" + shortenedPath
+}
+
+func callAndLogError(f func() error) {
+	err := f()
+	if err != nil {
+		slog.Error(err.Error())
+	}
 }
