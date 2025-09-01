@@ -66,11 +66,17 @@ const (
 var ErrMissingArgument = errors.New("missing required argument")
 
 // NewSQLiteSource opens a connection to an SQLite database at the given path and stores it internally.
+// It also creates a table with the given name if it does not exist.
 // You are responsible to close the connection using Close().
 func NewSQLiteSource(path string) (SQLiteSource, error) {
 	db, err := sql.Open("sqlite3", path)
+	if err != nil {
+		return SQLiteSource{}, err
+	}
 
-	return SQLiteSource{&SQLSource{db: db, tableName: DefaultTableName}}, err
+	sq := SQLiteSource{&SQLSource{db: db, tableName: DefaultTableName}}
+
+	return sq, sq.CreateTable()
 }
 
 func NewMySQLSourceFromEnv(tableName string) (MySQLSource, error) {
@@ -85,6 +91,7 @@ func NewMySQLSourceFromEnv(tableName string) (MySQLSource, error) {
 }
 
 // NewMySQLSource opens a connection to a MySQL database using given credentials and stores it internally.
+// It also creates a table with the given name if it does not exist.
 // You are responsible to close the connection using Close().
 func NewMySQLSource(host, port, user, password, dbName, tableName string) (MySQLSource, error) {
 	var missing []string
@@ -110,8 +117,13 @@ func NewMySQLSource(host, port, user, password, dbName, tableName string) (MySQL
 	address := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s", user, password, host, port, dbName)
 
 	db, err := sql.Open("mysql", address)
+	if err != nil {
+		return MySQLSource{}, err
+	}
 
-	return MySQLSource{&SQLSource{db: db, tableName: tableName}}, err
+	sq := MySQLSource{&SQLSource{db: db, tableName: tableName}}
+
+	return sq, sq.CreateTable()
 }
 
 func (sq SQLSource) Close() error {
