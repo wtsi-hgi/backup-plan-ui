@@ -101,11 +101,6 @@ func TestSQLiteSource_WriteEntries(t *testing.T) {
 	}
 	defer callAndLogTestError(t, sq.Close)
 
-	err = sq.CreateTable()
-	if err != nil {
-		t.Fatal(err)
-	}
-
 	err = sq.WriteEntries(entries)
 	if err != nil {
 		t.Fatal(err)
@@ -131,11 +126,6 @@ func TestMySQLSource_WriteEntries(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer callAndLogTestError(t, sq.Close)
-
-	err = sq.CreateTable()
-	if err != nil {
-		t.Fatal(err)
-	}
 	defer cleanupMySQL(t, sq)
 
 	entries := createTestEntries(t)
@@ -153,7 +143,7 @@ func TestMySQLSource_WriteEntries(t *testing.T) {
 	}
 }
 
-func TestSQLiteSource_CreateTable(t *testing.T) {
+func TestNewSQLiteSource(t *testing.T) {
 	dbFile := filepath.Join(t.TempDir(), "test.db")
 
 	sq, err := NewSQLiteSource(dbFile)
@@ -161,11 +151,6 @@ func TestSQLiteSource_CreateTable(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer callAndLogTestError(t, sq.Close)
-
-	err = sq.CreateTable()
-	if err != nil {
-		t.Fatal(err)
-	}
 
 	tableNames, err := sq.ShowTables()
 	if err != nil {
@@ -177,7 +162,7 @@ func TestSQLiteSource_CreateTable(t *testing.T) {
 	}
 }
 
-func TestMySQLSource_CreateTable(t *testing.T) {
+func TestNewMySQLSource(t *testing.T) {
 	tableName := "test_create_table"
 
 	sq, err := NewMySQLSourceFromEnv(tableName)
@@ -190,10 +175,6 @@ func TestMySQLSource_CreateTable(t *testing.T) {
 	}
 	defer callAndLogTestError(t, sq.Close)
 
-	err = sq.CreateTable()
-	if err != nil {
-		t.Fatal(err)
-	}
 	defer cleanupMySQL(t, sq)
 
 	tableNames, err := sq.ShowTables()
@@ -219,11 +200,6 @@ func createTestSQLiteTable(t *testing.T) ([]*Entry, SQLiteSource) {
 	dbFile := filepath.Join(t.TempDir(), "test.db")
 
 	sq, err := NewSQLiteSource(dbFile)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	err = sq.CreateTable()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -268,11 +244,6 @@ func createTestMySQLTable(t *testing.T) ([]*Entry, MySQLSource, string) {
 			t.Skip("Skipping MySQL test because MySQL host, port, user, pass, or database is not set.")
 		}
 
-		t.Fatal(err)
-	}
-
-	err = sq.CreateTable()
-	if err != nil {
 		t.Fatal(err)
 	}
 
