@@ -371,6 +371,7 @@ func TestValidateForm(t *testing.T) {
 		ReportingRoot: "/a/b/c/d/e",
 		Directory:     "/a/b/c/d/e/f",
 		Instruction:   "testInstruction",
+		Metadata:      "", //TODO: Adding this fails tests
 		Match:         "",
 		Ignore:        "",
 		Requestor:     "test_user",
@@ -378,7 +379,7 @@ func TestValidateForm(t *testing.T) {
 	}
 
 	for fieldName := range exampleFormData {
-		if fieldName == Match || fieldName == Ignore {
+		if fieldName == Match || fieldName == Ignore || fieldName == Metadata {
 			continue
 		}
 
@@ -451,6 +452,17 @@ func TestValidateForm(t *testing.T) {
 			}(),
 			KeyForErr:   Metadata,
 			expectedErr: ErrMetadataForNonManualSet,
+		},
+		{
+			name: "Metadata contains invalid character(s)",
+			formData: func() map[formField]string {
+				data := cloneMap(exampleFormData)
+				data[Instruction] = "manual backup"
+				data[Metadata] = "something,"
+				return data
+			}(),
+			KeyForErr:   Metadata,
+			expectedErr: ErrInvalidMetadata,
 		},
 		//TODO: test metadata does not contain commas, newlines or tabs
 	}

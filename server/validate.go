@@ -23,6 +23,7 @@ const (
 	ErrReportingRootNotDeepEnough = "Reporting Root must be atleast five levels deep"
 	ErrRootWithoutSlash           = "Reporting Root must start with a slash (/)"
 	ErrMetadataForNonManualSet    = "Metadata is only for 'manual backup's"
+	ErrInvalidMetadata            = "Metadata field must not contain comma, newline or tab characters"
 )
 
 func validateForm(r *http.Request) formValidationErrors {
@@ -103,7 +104,15 @@ func (fv FormValidator) validateDirectoryAndRoot() {
 
 func (fv FormValidator) validateMetadata() {
 	instruction := fv.getFormValue(Instruction)
+	metadata := fv.getFormValue(Metadata)
 	if instruction != string(sources.ManualBackup) {
 		fv.addErrorIfNew(Metadata, ErrMetadataForNonManualSet)
+		// fmt.Printf("instruction=%q, expected=%q\n", instruction, string(sources.ManualBackup))
+		// fmt.Printf("metadata=%q\n", metadata)
+	} else {
+		if strings.ContainsAny(metadata, ",\n\t") {
+			fv.addErrorIfNew(Metadata, ErrInvalidMetadata)
+		}
 	}
+
 }
