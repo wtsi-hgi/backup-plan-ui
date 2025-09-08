@@ -42,6 +42,10 @@ func createTestEntries(t *testing.T) []*Entry {
 		newEntry.ReportingName = fmt.Sprintf("test_project_%d", i)
 		newEntry.Instruction = instructions[i%len(instructions)]
 
+		if newEntry.Instruction == ManualBackup {
+			newEntry.Metadata = "aSetName"
+		}
+
 		entries[i] = &newEntry
 	}
 

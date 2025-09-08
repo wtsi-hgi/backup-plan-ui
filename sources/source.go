@@ -45,6 +45,7 @@ type Entry struct {
 	ReportingRoot string      `csv:"reporting_root"`
 	Directory     string      `csv:"directory"`
 	Instruction   Instruction `csv:"instruction"`
+	Metadata      string      `csv:"metadata"`
 	Match         string      `csv:"match"`
 	Ignore        string      `csv:"ignore"`
 	Requestor     string      `csv:"requestor"`

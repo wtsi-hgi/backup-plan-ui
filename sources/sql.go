@@ -31,6 +31,7 @@ const createSQLiteTableTmpl = `CREATE TABLE IF NOT EXISTS %s (
 	reporting_root TEXT,
 	directory TEXT,
 	instruction TEXT CHECK ( instruction IN ('%s', '%s', '%s', '%s') ),
+	metadata TEXT,
 	keep TEXT,
 	skip TEXT,
 	requestor TEXT,
@@ -43,6 +44,7 @@ const createMySQLTableTmpl = `CREATE TABLE IF NOT EXISTS %s (
 	reporting_root MEDIUMTEXT NOT NULL,
 	directory MEDIUMTEXT NOT NULL,
 	instruction ENUM('%s', '%s', '%s', '%s') NOT NULL,
+	metadata MEDIUMTEXT,
 	keep MEDIUMTEXT,
 	skip MEDIUMTEXT,
 	requestor VARCHAR(10) NOT NULL,
@@ -54,13 +56,13 @@ const (
 	deleteEntryStmt     = "DELETE FROM %s WHERE id = ?"
 	deleteReturningStmt = "DELETE FROM %s WHERE id = ? RETURNING *"
 	getAllStmt          = `SELECT id, reporting_name, reporting_root, directory, instruction, 
-		                   keep, skip, requestor, faculty FROM %s`
+		                   metadata, keep, skip, requestor, faculty FROM %s`
 	updateEntryStmt = `UPDATE %s 
 					   SET reporting_name = ?, reporting_root = ?, directory = ?, instruction = ?, 
-                       keep = ?, skip = ?, requestor = ?, faculty = ? WHERE id = ?`
+                       metadata = ?, keep = ?, skip = ?, requestor = ?, faculty = ? WHERE id = ?`
 	insertEntryStmt = `INSERT INTO %s 
-			           (reporting_name, reporting_root, directory, instruction, keep, skip, requestor, faculty) 
-			           VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+			           (reporting_name, reporting_root, directory, instruction, metadata, keep, skip, requestor, faculty) 
+			           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
 )
 
 var ErrMissingArgument = errors.New("missing required argument")
@@ -175,7 +177,7 @@ func (sq SQLSource) scanEntry(row scanner) (*Entry, error) {
 	var entry Entry
 
 	err := row.Scan(&entry.ID, &entry.ReportingName, &entry.ReportingRoot, &entry.Directory,
-		&entry.Instruction, &entry.Match, &entry.Ignore, &entry.Requestor, &entry.Faculty)
+		&entry.Instruction, &entry.Metadata, &entry.Match, &entry.Ignore, &entry.Requestor, &entry.Faculty)
 
 	if err != nil && errors.Is(err, sql.ErrNoRows) {
 		return nil, ErrNoEntry
@@ -198,7 +200,7 @@ func (sq SQLSource) UpdateEntry(newEntry *Entry) error {
 	stmt := fmt.Sprintf(updateEntryStmt, sq.tableName)
 
 	r, err := sq.db.Exec(stmt, newEntry.ReportingName, newEntry.ReportingRoot, newEntry.Directory,
-		newEntry.Instruction, newEntry.Match, newEntry.Ignore, newEntry.Requestor, newEntry.Faculty, newEntry.ID)
+		newEntry.Instruction, newEntry.Metadata, newEntry.Match, newEntry.Ignore, newEntry.Requestor, newEntry.Faculty, newEntry.ID)
 
 	if err != nil {
 		return err
@@ -284,7 +286,7 @@ func (sq SQLSource) WriteEntries(entries []*Entry) (err error) {
 
 	for _, entry := range entries {
 		r, err := stmt.Exec(entry.ReportingName, entry.ReportingRoot, entry.Directory,
-			entry.Instruction, entry.Match, entry.Ignore, entry.Requestor, entry.Faculty)
+			entry.Instruction, entry.Metadata, entry.Match, entry.Ignore, entry.Requestor, entry.Faculty)
 
 		if err != nil {
 			return err
