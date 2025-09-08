@@ -44,6 +44,15 @@
         </div>
       </div>
     </td>
+     <td>
+      <div class="field-wrapper">  
+        <input name='Metadata' value="{{.Entry.Metadata}}"
+        class="{{if index .Errors "Metadata"}}input-error{{end}}">
+        <div class="error-message">
+          {{with index .Errors "Metadata"}}{{.}}{{end}}
+        </div>
+      </div>
+    </td>
     <td>
       <div class="field-wrapper">  
         <div x-data="tagInputComponent('{{.Entry.Match}}'.split(' ').map(t => t.trim()).filter(Boolean), 'Match')">

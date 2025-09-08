@@ -54,6 +54,7 @@ const (
 	ReportingRoot formField = "ReportingRoot"
 	Directory     formField = "Directory"
 	Instruction   formField = "Instruction"
+	Metadata      formField = "Metadata"
 	Match         formField = "Match"
 	Ignore        formField = "Ignore"
 	Requestor     formField = "Requestor"
@@ -216,6 +217,7 @@ func createEntryFromForm(id uint16, r *http.Request) (*sources.Entry, formValida
 		ReportingRoot: r.FormValue(ReportingRoot.string()),
 		Directory:     r.FormValue(Directory.string()),
 		Instruction:   instruction,
+		Metadata:      r.FormValue(Metadata.string()),
 		Match:         r.FormValue(Match.string()),
 		Ignore:        r.FormValue(Ignore.string()),
 		Requestor:     r.FormValue(Requestor.string()),

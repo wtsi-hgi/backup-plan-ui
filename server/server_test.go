@@ -31,6 +31,10 @@ func TestShowAddRowForm(t *testing.T) {
 	if ok, err := So(body, ShouldContainSubstring, "<table"); !ok {
 		t.Error(err)
 	}
+
+	if ok, err := So(body, ShouldContainSubstring, "Metadata"); !ok {
+		t.Error(err)
+	}
 }
 
 func TestAddNewEntry(t *testing.T) {
@@ -103,6 +107,12 @@ func TestGetEntries(t *testing.T) {
 	for _, entry := range originalEntries {
 		if ok, err := So(body, ShouldContainSubstring, entry.ReportingName); !ok {
 			t.Error(err)
+		}
+		if entry.Instruction == sources.ManualBackup {
+			fmt.Printf("\n\ngot a manual backup with metadata %s\n\n", entry.Metadata)
+			if ok, err := So(body, ShouldContainSubstring, entry.Metadata); !ok {
+				t.Error(err)
+			}
 		}
 	}
 }
@@ -198,6 +208,16 @@ func TestSubmitEdits(t *testing.T) {
 				return entry
 			}(),
 			newValue: "NewFaculty",
+		},
+		{
+			name: "You can edit Metadata",
+			entry: func() sources.Entry {
+				entry := *entryToEdit
+				entry.Metadata = "NewMeta"
+
+				return entry
+			}(),
+			newValue: "NewMeta",
 		},
 	}
 
@@ -357,6 +377,7 @@ func TestValidateForm(t *testing.T) {
 		Requestor:     "test_user",
 		Faculty:       "test_group",
 	}
+	//TODO: test metadata does not contain newlines or tabs?...
 
 	for fieldName := range exampleFormData {
 		if fieldName == Match || fieldName == Ignore {
@@ -521,6 +542,7 @@ func createFormFromEntry(entry sources.Entry) url.Values {
 	form.Set(ReportingRoot.string(), entry.ReportingRoot)
 	form.Set(Directory.string(), entry.Directory)
 	form.Set(Instruction.string(), string(entry.Instruction))
+	form.Set(Metadata.string(), entry.Metadata)
 	form.Set(Match.string(), entry.Match)
 	form.Set(Ignore.string(), entry.Ignore)
 	form.Set(Requestor.string(), entry.Requestor)
