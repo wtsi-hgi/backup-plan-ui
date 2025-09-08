@@ -109,7 +109,6 @@ func TestGetEntries(t *testing.T) {
 			t.Error(err)
 		}
 		if entry.Instruction == sources.ManualBackup {
-			fmt.Printf("\n\ngot a manual backup with metadata %s\n\n", entry.Metadata)
 			if ok, err := So(body, ShouldContainSubstring, entry.Metadata); !ok {
 				t.Error(err)
 			}
@@ -169,6 +168,16 @@ func TestSubmitEdits(t *testing.T) {
 			newValue: string(sources.NoBackup),
 		},
 		{
+			name: "You can edit Metadata",
+			entry: func() sources.Entry {
+				entry := *entryToEdit
+				entry.Metadata = "NewMeta"
+
+				return entry
+			}(),
+			newValue: "NewMeta",
+		},
+		{
 			name: "You can edit Match",
 			entry: func() sources.Entry {
 				entry := *entryToEdit
@@ -208,16 +217,6 @@ func TestSubmitEdits(t *testing.T) {
 				return entry
 			}(),
 			newValue: "NewFaculty",
-		},
-		{
-			name: "You can edit Metadata",
-			entry: func() sources.Entry {
-				entry := *entryToEdit
-				entry.Metadata = "NewMeta"
-
-				return entry
-			}(),
-			newValue: "NewMeta",
 		},
 	}
 
@@ -377,7 +376,6 @@ func TestValidateForm(t *testing.T) {
 		Requestor:     "test_user",
 		Faculty:       "test_group",
 	}
-	//TODO: test metadata does not contain newlines or tabs?...
 
 	for fieldName := range exampleFormData {
 		if fieldName == Match || fieldName == Ignore {
@@ -443,6 +441,18 @@ func TestValidateForm(t *testing.T) {
 			KeyForErr:   Directory,
 			expectedErr: ErrDirectoryNotInRoot,
 		},
+		{
+			name: "Metadata for non-manual set",
+			formData: func() map[formField]string {
+				data := cloneMap(exampleFormData)
+				data[Instruction] = "backup"
+				data[Metadata] = "something"
+				return data
+			}(),
+			KeyForErr:   Metadata,
+			expectedErr: ErrMetadataForNonManualSet,
+		},
+		//TODO: test metadata does not contain commas, newlines or tabs
 	}
 
 	for _, test := range tests {
