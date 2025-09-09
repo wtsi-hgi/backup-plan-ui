@@ -171,6 +171,7 @@ func TestSubmitEdits(t *testing.T) {
 			name: "You can edit Metadata",
 			entry: func() sources.Entry {
 				entry := *entryToEdit
+				entry.Instruction = sources.ManualBackup
 				entry.Metadata = "NewMeta"
 
 				return entry

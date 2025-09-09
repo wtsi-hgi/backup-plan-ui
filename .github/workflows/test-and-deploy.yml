@@ -47,7 +47,7 @@ jobs:
     # These environment variables must be configured in the repository settings
     # DEPLOY_PATH: Path where the application will be deployed
     # SERVICE_NAME: Name of the systemd service to restart after deployment
-
+    if: ${{ github.event_name == 'push' }}
     environment: ${{ github.ref == 'refs/heads/main' && 'production' || 'development' }}
 
     steps:
