@@ -127,6 +127,7 @@ func (s Server) changeTemplate(w http.ResponseWriter, r *http.Request, tmplPath 
 	idStr := chi.URLParam(r, "id")
 	id, err := strconv.Atoi(idStr)
 	if err != nil {
+
 		return err
 	}
 
@@ -193,7 +194,6 @@ func (s Server) SubmitEdits(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		if errors.Is(err, sources.ErrNoEntry) {
 			writeMissingRow(w, id)
-
 			return
 		}
 

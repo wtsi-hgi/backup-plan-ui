@@ -372,7 +372,7 @@ func TestValidateForm(t *testing.T) {
 		ReportingRoot: "/a/b/c/d/e",
 		Directory:     "/a/b/c/d/e/f",
 		Instruction:   "testInstruction",
-		Metadata:      "", //TODO: Adding this fails tests
+		Metadata:      "",
 		Match:         "",
 		Ignore:        "",
 		Requestor:     "test_user",
@@ -465,7 +465,6 @@ func TestValidateForm(t *testing.T) {
 			KeyForErr:   Metadata,
 			expectedErr: ErrInvalidMetadata,
 		},
-		//TODO: test metadata does not contain commas, newlines or tabs
 	}
 
 	for _, test := range tests {
