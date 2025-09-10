@@ -107,8 +107,7 @@ func TestGetEntries(t *testing.T) {
 	for _, entry := range originalEntries {
 		if ok, err := So(body, ShouldContainSubstring, entry.ReportingName); !ok {
 			t.Error(err)
-		}
-		if entry.Instruction == sources.ManualBackup {
+		} else if entry.Instruction == sources.ManualBackup {
 			if ok, err := So(body, ShouldContainSubstring, entry.Metadata); !ok {
 				t.Error(err)
 			}
@@ -449,6 +448,7 @@ func TestValidateForm(t *testing.T) {
 				data := cloneMap(exampleFormData)
 				data[Instruction] = "backup"
 				data[Metadata] = "something"
+
 				return data
 			}(),
 			KeyForErr:   Metadata,
@@ -460,6 +460,7 @@ func TestValidateForm(t *testing.T) {
 				data := cloneMap(exampleFormData)
 				data[Instruction] = "manual backup"
 				data[Metadata] = "something,"
+
 				return data
 			}(),
 			KeyForErr:   Metadata,

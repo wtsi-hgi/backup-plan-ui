@@ -105,12 +105,14 @@ func (fv FormValidator) validateDirectoryAndRoot() {
 func (fv FormValidator) validateMetadata() {
 	instruction := fv.getFormValue(Instruction)
 	metadata := fv.getFormValue(Metadata)
+
 	if instruction != string(sources.ManualBackup) && metadata != "" {
 		fv.addErrorIfNew(Metadata, ErrMetadataForNonManualSet)
-	} else {
-		if strings.ContainsAny(metadata, ",\n\t") {
-			fv.addErrorIfNew(Metadata, ErrInvalidMetadata)
-		}
+
+		return
 	}
 
+	if strings.ContainsAny(metadata, ",\n\t") {
+		fv.addErrorIfNew(Metadata, ErrInvalidMetadata)
+	}
 }

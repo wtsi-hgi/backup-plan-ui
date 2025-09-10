@@ -1,6 +1,7 @@
 package sources
 
 import (
+	"context"
 	"database/sql"
 	"errors"
 	"fmt"
@@ -199,8 +200,10 @@ func (sq SQLSource) GetEntry(id uint16) (*Entry, error) {
 func (sq SQLSource) UpdateEntry(newEntry *Entry) error {
 	stmt := fmt.Sprintf(updateEntryStmt, sq.tableName)
 
-	r, err := sq.db.Exec(stmt, newEntry.ReportingName, newEntry.ReportingRoot, newEntry.Directory,
-		newEntry.Instruction, newEntry.Metadata, newEntry.Match, newEntry.Ignore, newEntry.Requestor, newEntry.Faculty, newEntry.ID)
+	ctx := context.Background()
+	r, err := sq.db.ExecContext(ctx, stmt, newEntry.ReportingName, newEntry.ReportingRoot,
+		newEntry.Directory, newEntry.Instruction, newEntry.Metadata, newEntry.Match,
+		newEntry.Ignore, newEntry.Requestor, newEntry.Faculty, newEntry.ID)
 
 	if err != nil {
 		return err
