@@ -115,10 +115,8 @@ linters:
       multi-if: true
       multi-func: false
     wsl_v5:
-      allow-cuddle-declarations: false
-      force-err-cuddling: true
       allow-first-in-block: true
-      allow-whole-block: 
+      allow-whole-block: false
       branch-max-lines: 2
       enable:
         - err
