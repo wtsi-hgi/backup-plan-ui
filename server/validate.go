@@ -108,8 +108,6 @@ func (fv FormValidator) validateMetadata() {
 
 	if instruction != string(sources.ManualBackup) && metadata != "" {
 		fv.addErrorIfNew(Metadata, ErrMetadataForNonManualSet)
-
-		return
 	}
 
 	if strings.ContainsAny(metadata, ",\n\t") {
