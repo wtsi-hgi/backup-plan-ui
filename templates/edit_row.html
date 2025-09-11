@@ -46,6 +46,15 @@
     </td>
     <td>
       <div class="field-wrapper">  
+        <input name='Metadata' value="{{.Entry.Metadata}}"
+        class="{{if index .Errors "Metadata"}}input-error{{end}}">
+        <div class="error-message">
+          {{with index .Errors "Metadata"}}{{.}}{{end}}
+        </div>
+      </div>
+    </td>
+    <td>
+      <div class="field-wrapper">  
         <div x-data="tagInputComponent('{{.Entry.Match}}'.split(' ').map(t => t.trim()).filter(Boolean), 'Match')">
           <div class="tag-container {{if index .Errors "Match"}}input-error{{end}}">
               <template x-for="(tag, i) in tags" :key="i">

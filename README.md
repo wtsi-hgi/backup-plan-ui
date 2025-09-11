@@ -91,6 +91,15 @@ For development deployment:
 
 GitHub Actions will automatically build, test, and deploy the application.
 
+## Converter
+
+To convert a csv file to a SQLlite or MySQL database to use as a starting point,
+run:
+
+```
+go run cmd/converter/main.go -b sqlite -csv data/plan.csv -sqlite data/plan.sqlite -replace
+```
+
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.

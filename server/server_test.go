@@ -5,10 +5,12 @@ import (
 	"fmt"
 	"html/template"
 	"io"
+	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -17,6 +19,10 @@ import (
 	"github.com/go-chi/chi/v5"
 	. "github.com/smarty/assertions"
 )
+
+func init() { //nolint:gochecknoinits
+	slog.SetLogLoggerLevel(slog.LevelError)
+}
 
 func TestShowAddRowForm(t *testing.T) {
 	s, _ := createServer(t)
@@ -29,6 +35,10 @@ func TestShowAddRowForm(t *testing.T) {
 	body := getBodyAndCheckStatusOK(t, w)
 
 	if ok, err := So(body, ShouldContainSubstring, "<table"); !ok {
+		t.Error(err)
+	}
+
+	if ok, err := So(body, ShouldContainSubstring, "Metadata"); !ok {
 		t.Error(err)
 	}
 }
@@ -103,6 +113,10 @@ func TestGetEntries(t *testing.T) {
 	for _, entry := range originalEntries {
 		if ok, err := So(body, ShouldContainSubstring, entry.ReportingName); !ok {
 			t.Error(err)
+		} else if entry.Instruction == sources.ManualBackup {
+			if ok, err := So(body, ShouldContainSubstring, entry.Metadata); !ok {
+				t.Error(err)
+			}
 		}
 	}
 }
@@ -112,7 +126,7 @@ func TestSubmitEdits(t *testing.T) {
 
 	entryToEdit := originalEntries[0]
 
-	tests := []struct {
+	tests := []*struct {
 		name     string
 		entry    sources.Entry
 		newValue string
@@ -159,6 +173,17 @@ func TestSubmitEdits(t *testing.T) {
 			newValue: string(sources.NoBackup),
 		},
 		{
+			name: "You can edit Metadata",
+			entry: func() sources.Entry {
+				entry := *entryToEdit
+				entry.Instruction = sources.ManualBackup
+				entry.Metadata = "NewMeta"
+
+				return entry
+			}(),
+			newValue: "NewMeta",
+		},
+		{
 			name: "You can edit Match",
 			entry: func() sources.Entry {
 				entry := *entryToEdit
@@ -199,6 +224,13 @@ func TestSubmitEdits(t *testing.T) {
 			}(),
 			newValue: "NewFaculty",
 		},
+	}
+
+	for i, test := range tests {
+		test.entry.ID = sources.NumTestDataRows + uint16(i) //nolint:gosec
+
+		err := s.db.AddEntry(&test.entry)
+		So(err, ShouldBeNil)
 	}
 
 	for _, test := range tests {
@@ -316,7 +348,7 @@ func TestDeleteRow(t *testing.T) {
 		w := httptest.NewRecorder()
 		r := httptest.NewRequest(http.MethodGet, "/", nil)
 		ctx := chi.NewRouteContext()
-		ctx.URLParams.Add("id", fmt.Sprint(sources.NumTestDataRows))
+		ctx.URLParams.Add("id", strconv.Itoa(sources.NumTestDataRows+1))
 
 		r = r.WithContext(context.WithValue(r.Context(), chi.RouteCtxKey, ctx))
 
@@ -330,7 +362,7 @@ func TestDeleteRow(t *testing.T) {
 		}
 
 		hxTrigger := res.Header.Get("HX-Trigger")
-		expectedTrigger := fmt.Sprintf(`{"entryMissing": {"id": %d}}`, sources.NumTestDataRows)
+		expectedTrigger := fmt.Sprintf(`{"entryMissing": {"id": %d}}`, sources.NumTestDataRows+1)
 
 		if ok, err := So(hxTrigger, ShouldEqual, expectedTrigger); !ok {
 			t.Error(err)
@@ -352,6 +384,7 @@ func TestValidateForm(t *testing.T) {
 		ReportingRoot: "/a/b/c/d/e",
 		Directory:     "/a/b/c/d/e/f",
 		Instruction:   "testInstruction",
+		Metadata:      "",
 		Match:         "",
 		Ignore:        "",
 		Requestor:     "test_user",
@@ -359,7 +392,7 @@ func TestValidateForm(t *testing.T) {
 	}
 
 	for fieldName := range exampleFormData {
-		if fieldName == Match || fieldName == Ignore {
+		if fieldName == Match || fieldName == Ignore || fieldName == Metadata {
 			continue
 		}
 
@@ -421,6 +454,30 @@ func TestValidateForm(t *testing.T) {
 			}(),
 			KeyForErr:   Directory,
 			expectedErr: ErrDirectoryNotInRoot,
+		},
+		{
+			name: "Metadata for non-manual set",
+			formData: func() map[formField]string {
+				data := cloneMap(exampleFormData)
+				data[Instruction] = "backup"
+				data[Metadata] = "something"
+
+				return data
+			}(),
+			KeyForErr:   Metadata,
+			expectedErr: ErrMetadataForNonManualSet,
+		},
+		{
+			name: "Metadata contains invalid character(s)",
+			formData: func() map[formField]string {
+				data := cloneMap(exampleFormData)
+				data[Instruction] = "manual backup"
+				data[Metadata] = "something,"
+
+				return data
+			}(),
+			KeyForErr:   Metadata,
+			expectedErr: ErrInvalidMetadata,
 		},
 	}
 
@@ -521,6 +578,7 @@ func createFormFromEntry(entry sources.Entry) url.Values {
 	form.Set(ReportingRoot.string(), entry.ReportingRoot)
 	form.Set(Directory.string(), entry.Directory)
 	form.Set(Instruction.string(), string(entry.Instruction))
+	form.Set(Metadata.string(), entry.Metadata)
 	form.Set(Match.string(), entry.Match)
 	form.Set(Ignore.string(), entry.Ignore)
 	form.Set(Requestor.string(), entry.Requestor)
@@ -532,7 +590,7 @@ func createFormFromEntry(entry sources.Entry) url.Values {
 func createServer(t *testing.T) (Server, []*sources.Entry) {
 	t.Helper()
 
-	entries, dbPath := sources.CreateTestCSV(t)
+	entries, sqlSource := sources.CreateTestSQLiteTable(t)
 
 	funcMap := template.FuncMap{
 		"ShortenPath":  ShortenPath,
@@ -548,7 +606,7 @@ func createServer(t *testing.T) (Server, []*sources.Entry) {
 	}
 
 	server := Server{
-		db:        sources.CSVSource{Path: dbPath},
+		db:        sqlSource,
 		templates: templates,
 	}
 

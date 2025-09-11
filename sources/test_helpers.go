@@ -5,6 +5,7 @@ package sources
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/gocarina/gocsv"
@@ -30,6 +31,7 @@ func createTestEntries(t *testing.T) []*Entry {
 		ReportingRoot: "/some/path/to/project/dir",
 		Directory:     "/some/path/to/project/dir/input",
 		Instruction:   instructions[0],
+		Metadata:      "",
 		Requestor:     "user",
 		Faculty:       "group",
 	}
@@ -41,6 +43,10 @@ func createTestEntries(t *testing.T) []*Entry {
 		newEntry.ID = uint16(i)
 		newEntry.ReportingName = fmt.Sprintf("test_project_%d", i)
 		newEntry.Instruction = instructions[i%len(instructions)]
+
+		if newEntry.Instruction == ManualBackup {
+			newEntry.Metadata = "aSetName"
+		}
 
 		entries[i] = &newEntry
 	}
@@ -71,4 +77,29 @@ func CreateTestCSV(t *testing.T) ([]*Entry, string) {
 	}
 
 	return entries, file.Name()
+}
+
+// CreateTestSQLiteTable initialises a test SQLite database, creates a table, inserts test entries, and returns them and
+// SQLite source. You should close the database connection with sq.Close() once it no longer needed.
+func CreateTestSQLiteTable(t *testing.T) ([]*Entry, SQLiteSource) {
+	t.Helper()
+
+	entries := createTestEntries(t)
+	for _, entry := range entries {
+		entry.ID++
+	}
+
+	dbFile := filepath.Join(t.TempDir(), "test.db")
+
+	sq, err := NewSQLiteSource(dbFile)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = sq.WriteEntries(entries)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	return entries, sq
 }

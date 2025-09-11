@@ -22,6 +22,8 @@ const (
 	ErrDirectoryNotInRoot         = "Directory must be inside Reporting root"
 	ErrReportingRootNotDeepEnough = "Reporting Root must be atleast five levels deep"
 	ErrRootWithoutSlash           = "Reporting Root must start with a slash (/)"
+	ErrMetadataForNonManualSet    = "Metadata is only for 'manual backup's"
+	ErrInvalidMetadata            = "Metadata field must not contain comma, newline or tab characters"
 )
 
 func validateForm(r *http.Request) formValidationErrors {
@@ -33,6 +35,7 @@ func validateForm(r *http.Request) formValidationErrors {
 	fv.validateNonBlankInputs()
 	fv.validateInstructionAndIgnore()
 	fv.validateDirectoryAndRoot()
+	fv.validateMetadata()
 
 	return fv.errors
 }
@@ -96,5 +99,18 @@ func (fv FormValidator) validateDirectoryAndRoot() {
 
 	if depth < 5 {
 		fv.addErrorIfNew(ReportingRoot, ErrReportingRootNotDeepEnough)
+	}
+}
+
+func (fv FormValidator) validateMetadata() {
+	instruction := fv.getFormValue(Instruction)
+	metadata := fv.getFormValue(Metadata)
+
+	if instruction != string(sources.ManualBackup) && metadata != "" {
+		fv.addErrorIfNew(Metadata, ErrMetadataForNonManualSet)
+	}
+
+	if strings.ContainsAny(metadata, ",\n\t") {
+		fv.addErrorIfNew(Metadata, ErrInvalidMetadata)
 	}
 }
