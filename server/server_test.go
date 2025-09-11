@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"html/template"
 	"io"
+	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -17,6 +18,10 @@ import (
 	"github.com/go-chi/chi/v5"
 	. "github.com/smarty/assertions"
 )
+
+func init() {
+	slog.SetLogLoggerLevel(slog.LevelError)
+}
 
 func TestShowAddRowForm(t *testing.T) {
 	s, _ := createServer(t)
@@ -120,7 +125,7 @@ func TestSubmitEdits(t *testing.T) {
 
 	entryToEdit := originalEntries[0]
 
-	tests := []struct {
+	tests := []*struct {
 		name     string
 		entry    sources.Entry
 		newValue string
@@ -218,6 +223,13 @@ func TestSubmitEdits(t *testing.T) {
 			}(),
 			newValue: "NewFaculty",
 		},
+	}
+
+	for i, test := range tests {
+		test.entry.ID = sources.NumTestDataRows + uint16(i)
+
+		err := s.db.AddEntry(&test.entry)
+		So(err, ShouldBeNil)
 	}
 
 	for _, test := range tests {
@@ -577,7 +589,7 @@ func createFormFromEntry(entry sources.Entry) url.Values {
 func createServer(t *testing.T) (Server, []*sources.Entry) {
 	t.Helper()
 
-	entries, dbPath := sources.CreateTestCSV(t)
+	entries, sqlSource := sources.CreateTestSQLiteTable(t)
 
 	funcMap := template.FuncMap{
 		"ShortenPath":  ShortenPath,
@@ -593,7 +605,7 @@ func createServer(t *testing.T) (Server, []*sources.Entry) {
 	}
 
 	server := Server{
-		db:        sources.CSVSource{Path: dbPath},
+		db:        sqlSource,
 		templates: templates,
 	}
 
