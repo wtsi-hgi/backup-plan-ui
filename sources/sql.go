@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"slices"
 
 	_ "github.com/go-sql-driver/mysql"
 	_ "github.com/mattn/go-sqlite3"
@@ -126,7 +127,16 @@ func NewMySQLSource(host, port, user, password, dbName, tableName string) (MySQL
 
 	sq := MySQLSource{&SQLSource{db: db, tableName: tableName}}
 
-	return sq, sq.CreateTable()
+	tables, err := sq.ShowTables()
+	if err != nil {
+		return sq, err
+	}
+
+	if !slices.Contains(tables, tableName) {
+		return sq, sq.CreateTable()
+	}
+
+	return sq, nil
 }
 
 func (sq SQLSource) Close() error {
