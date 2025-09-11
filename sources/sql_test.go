@@ -187,35 +187,10 @@ func TestNewMySQLSource(t *testing.T) {
 	}
 }
 
-// createTestSQLiteTable initialises a test SQLite database, creates a table, inserts test entries, and returns them and
-// SQLite source. You should close the database connection with sq.Close() once it no longer needed.
-func createTestSQLiteTable(t *testing.T) ([]*Entry, SQLiteSource) {
-	t.Helper()
-
-	entries := createTestEntries(t)
-	for _, entry := range entries {
-		entry.ID += 1
-	}
-
-	dbFile := filepath.Join(t.TempDir(), "test.db")
-
-	sq, err := NewSQLiteSource(dbFile)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	err = sq.WriteEntries(entries)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	return entries, sq
-}
-
 func setupSQLiteSourceForTest(t *testing.T) ([]*Entry, DataSource) {
 	t.Helper()
 
-	entries, sq := createTestSQLiteTable(t)
+	entries, sq := CreateTestSQLiteTable(t)
 
 	cleanup := func() {
 		callAndLogTestError(t, sq.Close)
