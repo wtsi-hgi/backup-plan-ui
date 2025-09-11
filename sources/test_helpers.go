@@ -86,7 +86,7 @@ func CreateTestSQLiteTable(t *testing.T) ([]*Entry, SQLiteSource) {
 
 	entries := createTestEntries(t)
 	for _, entry := range entries {
-		entry.ID += 1
+		entry.ID++
 	}
 
 	dbFile := filepath.Join(t.TempDir(), "test.db")

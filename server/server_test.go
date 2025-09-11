@@ -10,6 +10,7 @@ import (
 	"net/http/httptest"
 	"net/url"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -19,7 +20,7 @@ import (
 	. "github.com/smarty/assertions"
 )
 
-func init() {
+func init() { //nolint:gochecknoinits
 	slog.SetLogLoggerLevel(slog.LevelError)
 }
 
@@ -226,7 +227,7 @@ func TestSubmitEdits(t *testing.T) {
 	}
 
 	for i, test := range tests {
-		test.entry.ID = sources.NumTestDataRows + uint16(i)
+		test.entry.ID = sources.NumTestDataRows + uint16(i) //nolint:gosec
 
 		err := s.db.AddEntry(&test.entry)
 		So(err, ShouldBeNil)
@@ -347,7 +348,7 @@ func TestDeleteRow(t *testing.T) {
 		w := httptest.NewRecorder()
 		r := httptest.NewRequest(http.MethodGet, "/", nil)
 		ctx := chi.NewRouteContext()
-		ctx.URLParams.Add("id", fmt.Sprint(sources.NumTestDataRows+1))
+		ctx.URLParams.Add("id", strconv.Itoa(sources.NumTestDataRows+1))
 
 		r = r.WithContext(context.WithValue(r.Context(), chi.RouteCtxKey, ctx))
 
