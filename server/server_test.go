@@ -347,7 +347,7 @@ func TestDeleteRow(t *testing.T) {
 		w := httptest.NewRecorder()
 		r := httptest.NewRequest(http.MethodGet, "/", nil)
 		ctx := chi.NewRouteContext()
-		ctx.URLParams.Add("id", fmt.Sprint(sources.NumTestDataRows))
+		ctx.URLParams.Add("id", fmt.Sprint(sources.NumTestDataRows+1))
 
 		r = r.WithContext(context.WithValue(r.Context(), chi.RouteCtxKey, ctx))
 
@@ -361,7 +361,7 @@ func TestDeleteRow(t *testing.T) {
 		}
 
 		hxTrigger := res.Header.Get("HX-Trigger")
-		expectedTrigger := fmt.Sprintf(`{"entryMissing": {"id": %d}}`, sources.NumTestDataRows)
+		expectedTrigger := fmt.Sprintf(`{"entryMissing": {"id": %d}}`, sources.NumTestDataRows+1)
 
 		if ok, err := So(hxTrigger, ShouldEqual, expectedTrigger); !ok {
 			t.Error(err)
