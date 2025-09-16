@@ -1,4 +1,4 @@
-package sources
+package sourcesNewSchema
 
 import (
 	"database/sql"
@@ -34,22 +34,22 @@ const createSQLiteRulesTableTmpl = `CREATE TABLE %s (
 
 const showSQLiteTablesStmt = "SELECT name FROM sqlite_master WHERE type='table'"
 
-type NewSchemaSQLiteSource struct {
-	*NewSchemaSQLSource
+type SQLiteSource struct {
+	*SQLSource
 }
 
-// NewSchemaNewSQLiteSource opens a connection to an SQLite database at the given path and stores it internally.
+// NewSQLiteSource opens a connection to an SQLite database at the given path and stores it internally.
 // It also creates a table with the given name if it does not exist.
 // You are responsible to close the connection using Close().
-func NewSchemaNewSQLiteSource(path string) (*NewSchemaSQLiteSource, error) {
+func NewSQLiteSource(path string) (*SQLiteSource, error) {
 	// TODO add test for foreign keys
 	db, err := sql.Open("sqlite3", path+"?_foreign_keys=on")
 	if err != nil {
 		return nil, err
 	}
 
-	sq := &NewSchemaSQLiteSource{
-		&NewSchemaSQLSource{
+	sq := &SQLiteSource{
+		&SQLSource{
 			db:                   db,
 			usersTableName:       DefaultUsersTableName,
 			directoriesTableName: DefaultDirectoriesTableName,
@@ -60,11 +60,11 @@ func NewSchemaNewSQLiteSource(path string) (*NewSchemaSQLiteSource, error) {
 	return sq, sq.Init()
 }
 
-func (sq NewSchemaSQLiteSource) ShowTables() ([]string, error) {
-	return sq.scanTableNames(showSQLiteTablesStmt)
+func (sq SQLiteSource) ShowTables() ([]string, error) {
+	return sq.showTables(showSQLiteTablesStmt)
 }
 
-func (sq NewSchemaSQLiteSource) Init() error {
+func (sq SQLiteSource) Init() error {
 	return sq.init(
 		createSQLiteUsersTableTmpl,
 		createSQLiteDirectoriesTableTmpl,

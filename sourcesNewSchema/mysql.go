@@ -1,7 +1,8 @@
-package sources
+package sourcesNewSchema
 
 import (
 	"database/sql"
+	"errors"
 	"fmt"
 	"os"
 	"slices"
@@ -35,13 +36,15 @@ const createMySQLRulesTableTmpl = `CREATE TABLE IF NOT EXISTS %s (
 	FOREIGN KEY (directoryID) REFERENCES %s(id) ON DELETE CASCADE
 )`
 
-type NewSchemaMySQLSource struct {
-	*NewSchemaSQLSource
+var ErrMissingArgument = errors.New("missing required argument")
+
+type MySQLSource struct {
+	*SQLSource
 }
 
-func NewSchemaNewMySQLSourceFromEnv(usersTableName, directoriesTableName, rulesTableName string,
-) (*NewSchemaMySQLSource, error) {
-	return NewSchemaNewMySQLSource(
+func NewMySQLSourceFromEnv(usersTableName, directoriesTableName, rulesTableName string,
+) (*MySQLSource, error) {
+	return NewMySQLSource(
 		os.Getenv("MYSQL_HOST"),
 		os.Getenv("MYSQL_PORT"),
 		os.Getenv("MYSQL_USER"),
@@ -53,11 +56,11 @@ func NewSchemaNewMySQLSourceFromEnv(usersTableName, directoriesTableName, rulesT
 	)
 }
 
-// NewSchemaNewMySQLSource opens a connection to a MySQL database using given credentials and stores it internally.
+// NewMySQLSource opens a connection to a MySQL database using given credentials and stores it internally.
 // It also creates a table with the given name if it does not exist.
 // You are responsible to close the connection using Close().
-func NewSchemaNewMySQLSource(host, port, user, password, dbName, usersTableName, directoriesTableName,
-	rulesTableName string) (*NewSchemaMySQLSource, error) {
+func NewMySQLSource(host, port, user, password, dbName, usersTableName, directoriesTableName,
+	rulesTableName string) (*MySQLSource, error) {
 	var missing []string
 
 	appendIfEmpty(&missing, "host", host)
@@ -77,8 +80,8 @@ func NewSchemaNewMySQLSource(host, port, user, password, dbName, usersTableName,
 		return nil, err
 	}
 
-	sq := &NewSchemaMySQLSource{
-		&NewSchemaSQLSource{
+	sq := &MySQLSource{
+		&SQLSource{
 			db:                   db,
 			usersTableName:       usersTableName,
 			directoriesTableName: directoriesTableName,
@@ -95,11 +98,11 @@ func appendIfEmpty(array *[]string, name, val string) {
 	}
 }
 
-func (sq NewSchemaMySQLSource) ShowTables() ([]string, error) {
-	return sq.scanTableNames("SHOW TABLES")
+func (sq MySQLSource) ShowTables() ([]string, error) {
+	return sq.showTables("SHOW TABLES")
 }
 
-func (sq NewSchemaMySQLSource) Init() error {
+func (sq MySQLSource) Init() error {
 	tables, err := sq.ShowTables()
 	if err != nil {
 		return err
