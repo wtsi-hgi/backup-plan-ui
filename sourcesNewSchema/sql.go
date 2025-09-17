@@ -20,6 +20,7 @@ const dropTableSQLTmpl = "DROP TABLE IF EXISTS %s"
 
 const insertDirectoryTmpl = "INSERT INTO %s (path, faculty, programme, claimedBy) VALUES (?, ?, ?, ?)"
 const selectDirectoryTmpl = "SELECT id, path, faculty, programme, claimedBy FROM %s WHERE id = ?"
+const claimDirectoryTmpl = "UPDATE %s SET claimedBy = ? WHERE id = ?"
 
 var DefaultTables = []string{DefaultDirectoriesTableName, DefaultRulesTableName}
 
@@ -38,6 +39,7 @@ type SQLSourceInterface interface {
 	DropTables() error
 	AddDirectory(directory Directory) (uint, error)
 	GetDirectory(id uint) (*Directory, error)
+	ClaimDirectory(id uint, user string) error
 }
 
 // SQLSource is a type for shared functionality between MySQL and SQLite.
@@ -155,4 +157,24 @@ func (sq SQLSource) GetDirectory(id uint) (*Directory, error) {
 	}
 
 	return &directory, nil
+}
+
+func (sq SQLSource) ClaimDirectory(id uint, user string) error {
+	stmt := fmt.Sprintf(claimDirectoryTmpl, sq.directoriesTableName)
+
+	result, err := sq.db.Exec(stmt, user, id)
+	if err != nil {
+		return err
+	}
+
+	n, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+
+	if n == 0 {
+		return ErrNoDirectory
+	}
+
+	return nil
 }

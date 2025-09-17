@@ -113,21 +113,39 @@ func setupSQLiteSourceForTest(t *testing.T) SQLSourceInterface {
 	return sq
 }
 
-func TestSQLSourceInterface_AddDirectory(t *testing.T) {
+func TestSQLSourceInterface(t *testing.T) {
 	for _, tc := range sqlTestCases {
 		Convey(fmt.Sprintf("Given a %s connection", tc.name), t, func() {
 			sq := tc.setup(t)
 
-			Convey("You can add a directory", func() {
-				directory := Directory{
-					Path:      "/path",
-					Faculty:   "test",
-					Programme: "test",
-				}
+			directory := Directory{
+				Path:      "/path",
+				Faculty:   "test",
+				Programme: "test",
+			}
 
+			Convey("You cannot get a non-existent directory", func() {
+				_, err := sq.GetDirectory(1)
+				So(err, ShouldEqual, ErrNoDirectory)
+			})
+
+			Convey("You cannot claim a non-existent directory", func() {
+				err := sq.ClaimDirectory(1, "testUser")
+				So(err, ShouldEqual, ErrNoDirectory)
+			})
+
+			Convey("You can add a directory", func() {
 				id, err := sq.AddDirectory(directory)
 				So(err, ShouldBeNil)
 				So(id, ShouldBeGreaterThan, 0)
+
+				Convey("You can get a directory", func() {
+					result, err := sq.GetDirectory(id)
+					So(err, ShouldBeNil)
+
+					directory.ID = id
+					So(result, ShouldResemble, &directory)
+				})
 
 				Convey("You cannot add a directory with the same path", func() {
 					directory2 := directory
@@ -138,36 +156,26 @@ func TestSQLSourceInterface_AddDirectory(t *testing.T) {
 					_, err = sq.AddDirectory(directory2)
 					So(err, ShouldEqual, ErrDirectoryDuplicate)
 				})
-			})
-		})
-	}
-}
 
-func TestSQLSourceInterface_GetDirectory(t *testing.T) {
-	for _, tc := range sqlTestCases {
-		Convey(fmt.Sprintf("Given a %s connection", tc.name), t, func() {
-			sq := tc.setup(t)
+				Convey("You can claim a directory", func() {
+					err = sq.ClaimDirectory(id, "testUser")
+					So(err, ShouldBeNil)
 
-			Convey("You cannot get non-existent directory", func() {
-				_, err := sq.GetDirectory(1)
-				So(err, ShouldEqual, ErrNoDirectory)
+					result, err := sq.GetDirectory(id)
+					So(err, ShouldBeNil)
+					So(result.ClaimedBy, ShouldEqual, "testUser")
+				})
 			})
 
-			Convey("You can get existing directory", func() {
-				directory := Directory{
-					Path:      "/path",
-					Faculty:   "test",
-					Programme: "test",
-				}
+			Convey("You can add a directory with a claimed user", func() {
+				directory.ClaimedBy = "testUser"
 
 				id, err := sq.AddDirectory(directory)
 				So(err, ShouldBeNil)
 
 				result, err := sq.GetDirectory(id)
 				So(err, ShouldBeNil)
-
-				directory.ID = id
-				So(result, ShouldResemble, &directory)
+				So(result.ClaimedBy, ShouldEqual, directory.ClaimedBy)
 			})
 		})
 	}
