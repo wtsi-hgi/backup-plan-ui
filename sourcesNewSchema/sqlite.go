@@ -38,7 +38,8 @@ const createSQLiteRulesTableTmpl = `CREATE TABLE %s (
 	FOREIGN KEY (directoryID) REFERENCES %s(id) ON DELETE CASCADE
 )`
 
-const showSQLiteTablesStmt = "SELECT name FROM sqlite_master WHERE type='table'"
+const sqliteShowTablesStmt = "SELECT name FROM sqlite_master WHERE type='table'"
+const sqliteDuplicateEntryError = "UNIQUE constraint failed"
 
 type SQLiteSource struct {
 	*SQLSource
@@ -48,7 +49,6 @@ type SQLiteSource struct {
 // It also creates a table with the given name if it does not exist.
 // You are responsible to close the connection using Close().
 func NewSQLiteSource(path string) (*SQLiteSource, error) {
-	// TODO add test for foreign keys
 	db, err := sql.Open("sqlite3", path+"?_foreign_keys=on")
 	if err != nil {
 		return nil, err
@@ -59,7 +59,7 @@ func NewSQLiteSource(path string) (*SQLiteSource, error) {
 			db:                   db,
 			directoriesTableName: DefaultDirectoriesTableName,
 			rulesTableName:       DefaultRulesTableName,
-			dupRowsError:         "UNIQUE constraint failed",
+			dupRowsError:         sqliteDuplicateEntryError,
 		},
 	}
 
@@ -67,7 +67,7 @@ func NewSQLiteSource(path string) (*SQLiteSource, error) {
 }
 
 func (sq SQLiteSource) ShowTables() ([]string, error) {
-	return sq.showTables(showSQLiteTablesStmt)
+	return sq.showTables(sqliteShowTablesStmt)
 }
 
 func (sq SQLiteSource) Init() error {

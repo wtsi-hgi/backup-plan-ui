@@ -11,6 +11,20 @@ const (
 	DefaultDeleteMonth     = 12
 )
 
+type DataSource interface {
+	Init() error
+	Close() error
+
+	AddDirectory(directory Directory) (uint, error)
+	GetDirectory(id uint) (*Directory, error)
+	ClaimDirectory(id uint, user string) error
+	DeleteDirectory(id uint) error
+
+	SetRule(id uint, rule Rule) (uint, error)
+	UpdateRule(id uint, rule Rule) error
+	DeleteRule(id uint) error
+}
+
 type Directory struct {
 	ID        uint
 	Path      string
@@ -28,6 +42,10 @@ type Rule struct {
 	ReviewAt        time.Time
 	DeleteAt        time.Time
 	WildcardMatch   string
+}
+
+func (d *Directory) AddRule(rule Rule) {
+	d.Rules = append(d.Rules, &rule)
 }
 
 func (r *Rule) IsValid() error {

@@ -133,6 +133,21 @@ func TestSQLSourceInterface(t *testing.T) {
 				So(err, ShouldEqual, ErrNoDirectory)
 			})
 
+			Convey("You cannot delete a non-existent directory", func() {
+				err := sq.DeleteDirectory(1)
+				So(err, ShouldEqual, ErrNoDirectory)
+			})
+
+			Convey("You cannot update a non-existent rule", func() {
+				err := sq.UpdateRule(1, Rule{})
+				So(err, ShouldEqual, ErrNoRule)
+			})
+
+			Convey("You cannot delete a non-existent rule", func() {
+				err := sq.DeleteRule(1)
+				So(err, ShouldEqual, ErrNoRule)
+			})
+
 			Convey("You can add a directory", func() {
 				id, err := sq.AddDirectory(directory)
 				So(err, ShouldBeNil)
@@ -174,6 +189,14 @@ func TestSQLSourceInterface(t *testing.T) {
 					})
 				})
 
+				Convey("You can delete a directory", func() {
+					err = sq.DeleteDirectory(id)
+					So(err, ShouldBeNil)
+
+					_, err = sq.GetDirectory(id)
+					So(err, ShouldEqual, ErrNoDirectory)
+				})
+
 				Convey("And a valid rule", func() {
 					rule := Rule{
 						BackupType: "backup",
@@ -182,10 +205,11 @@ func TestSQLSourceInterface(t *testing.T) {
 					rule.SetDefaults()
 
 					Convey("You can set a rule for a directory", func() {
-						err = sq.SetRule(id, rule)
+						ruleID, err := sq.SetRule(id, rule)
 						So(err, ShouldBeNil)
+						So(ruleID, ShouldBeGreaterThan, 0)
 
-						rule.ID = 1
+						rule.ID = ruleID
 						rule.ReviewAt = rule.ReviewAt.Truncate(24 * time.Hour)
 						rule.DeleteAt = rule.DeleteAt.Truncate(24 * time.Hour)
 
@@ -193,9 +217,29 @@ func TestSQLSourceInterface(t *testing.T) {
 						So(err, ShouldBeNil)
 						So(result.Rules, ShouldHaveLength, 1)
 						So(result.Rules[0], ShouldResemble, &rule)
+
+						Convey("You can delete a rule for a directory", func() {
+							err = sq.DeleteRule(rule.ID)
+							So(err, ShouldBeNil)
+
+							result, err = sq.GetDirectory(id)
+							So(err, ShouldBeNil)
+							So(result.Rules, ShouldHaveLength, 0)
+						})
+
+						Convey("You can update a rule for a directory", func() {
+							rule.BackupType = "test"
+
+							err = sq.UpdateRule(rule.ID, rule)
+							So(err, ShouldBeNil)
+
+							result, err = sq.GetDirectory(id)
+							So(err, ShouldBeNil)
+							So(result.Rules, ShouldHaveLength, 1)
+							So(result.Rules[0].BackupType, ShouldResemble, "test")
+						})
 					})
 				})
-
 			})
 
 			Convey("You can add a directory with a claimed user", func() {
@@ -207,6 +251,35 @@ func TestSQLSourceInterface(t *testing.T) {
 				result, err := sq.GetDirectory(id)
 				So(err, ShouldBeNil)
 				So(result.ClaimedBy, ShouldEqual, directory.ClaimedBy)
+			})
+
+			Convey("Given a valid rule", func() {
+				rule := Rule{
+					BackupType: "backup",
+				}
+
+				rule.SetDefaults()
+
+				Convey("You cannot set a rule for a non-existent directory", func() {
+					_, err := sq.SetRule(1, rule)
+					So(err, ShouldEqual, ErrNoDirectory)
+				})
+
+				Convey("You can add a directory with a rule", func() {
+					directory.AddRule(rule)
+
+					id, err := sq.AddDirectory(directory)
+					So(err, ShouldBeNil)
+
+					rule.ID = 1
+					rule.ReviewAt = rule.ReviewAt.Truncate(24 * time.Hour)
+					rule.DeleteAt = rule.DeleteAt.Truncate(24 * time.Hour)
+
+					result, err := sq.GetDirectory(id)
+					So(err, ShouldBeNil)
+					So(result.Rules, ShouldHaveLength, 1)
+					So(result.Rules[0], ShouldResemble, &rule)
+				})
 			})
 		})
 	}

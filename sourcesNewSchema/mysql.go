@@ -37,6 +37,9 @@ const createMySQLRulesTableTmpl = `CREATE TABLE IF NOT EXISTS %s (
 	FOREIGN KEY (directoryID) REFERENCES %s(id) ON DELETE CASCADE
 )`
 
+const mySQLShowTablesStmt = "SHOW TABLES"
+const mySQLDuplicateEntryError = "Duplicate entry"
+
 var ErrMissingArgument = errors.New("missing required argument")
 
 type MySQLSource struct {
@@ -85,7 +88,7 @@ func NewMySQLSource(host, port, user, password, dbName, directoriesTableName,
 			db:                   db,
 			directoriesTableName: directoriesTableName,
 			rulesTableName:       rulesTableName,
-			dupRowsError:         "Duplicate entry",
+			dupRowsError:         mySQLDuplicateEntryError,
 		},
 	}
 
@@ -99,7 +102,7 @@ func appendIfEmpty(array *[]string, name, val string) {
 }
 
 func (sq MySQLSource) ShowTables() ([]string, error) {
-	return sq.showTables("SHOW TABLES")
+	return sq.showTables(mySQLShowTablesStmt)
 }
 
 func (sq MySQLSource) Init() error {
