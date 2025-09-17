@@ -2,6 +2,7 @@ package sourcesNewSchema
 
 import (
 	"database/sql"
+	"fmt"
 )
 
 const createSQLiteDirectoriesTableTmpl = `CREATE TABLE %s (
@@ -9,8 +10,18 @@ const createSQLiteDirectoriesTableTmpl = `CREATE TABLE %s (
 	path TEXT NOT NULL UNIQUE,
 	faculty TEXT NOT NULL,
     programme TEXT NOT NULL,
-	claimedBy TEXT
+	claimedBy TEXT,
+	created DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	modified DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 )`
+
+const createSQLiteTriggerTmpl = `CREATE TRIGGER %[1]s_modified_timestamp
+AFTER UPDATE ON %[1]s
+FOR EACH ROW
+BEGIN
+	UPDATE %[1]s SET modified = CURRENT_TIMESTAMP WHERE id = OLD.id;
+END
+`
 
 const createSQLiteRulesTableTmpl = `CREATE TABLE %s (
 	id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -18,9 +29,11 @@ const createSQLiteRulesTableTmpl = `CREATE TABLE %s (
 	backupType TEXT NOT NULL,
 	backupMetadata TEXT,
 	backupFrequency INTEGER NOT NULL,
-	reviewAt INTEGER,
-	deleteAt INTEGER,
-	wildcardMatch TEXT,
+	wildcardMatch TEXT NOT NULL,
+	reviewAt DATE NOT NULL,
+	deleteAt DATE NOT NULL,
+	created DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	modified DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	
 	FOREIGN KEY (directoryID) REFERENCES %s(id) ON DELETE CASCADE
 )`
@@ -58,8 +71,20 @@ func (sq SQLiteSource) ShowTables() ([]string, error) {
 }
 
 func (sq SQLiteSource) Init() error {
-	return sq.init(
+	err := sq.init(
 		createSQLiteDirectoriesTableTmpl,
 		createSQLiteRulesTableTmpl,
 	)
+	if err != nil {
+		return err
+	}
+
+	for _, tableName := range []string{sq.directoriesTableName, sq.rulesTableName} {
+		_, err = sq.db.Exec(fmt.Sprintf(createSQLiteTriggerTmpl, tableName))
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }

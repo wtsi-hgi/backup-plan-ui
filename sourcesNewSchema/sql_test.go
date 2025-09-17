@@ -6,6 +6,7 @@ import (
 	"math/rand"
 	"path/filepath"
 	"testing"
+	"time"
 
 	. "github.com/smartystreets/goconvey/convey"
 )
@@ -19,23 +20,23 @@ var sqlTestCases = []struct {
 }
 
 func TestNewSQLiteSource(t *testing.T) {
-	dbFile := filepath.Join(t.TempDir(), "test.db")
+	Convey("Given a database file", t, func() {
+		dbFile := filepath.Join(t.TempDir(), "test.db")
 
-	sq, err := NewSQLiteSource(dbFile)
-	if err != nil {
-		t.Fatal(err)
-	}
+		Convey("You can create a SQLite source", func() {
+			sq, err := NewSQLiteSource(dbFile)
+			So(err, ShouldBeNil)
 
-	t.Cleanup(callAndLogCleanup(t, sq.Close))
+			t.Cleanup(callAndLogCleanup(t, sq.Close))
 
-	tableNames, err := sq.ShowTables()
-	if err != nil {
-		t.Fatal(err)
-	}
+			tableNames, err := sq.ShowTables()
+			So(err, ShouldBeNil)
 
-	for _, tableName := range DefaultTables {
-		So(tableNames, ShouldContain, tableName)
-	}
+			for _, tableName := range DefaultTables {
+				So(tableNames, ShouldContain, tableName)
+			}
+		})
+	})
 }
 
 func callAndLogCleanup(t *testing.T, f func() error) func() {
@@ -50,29 +51,27 @@ func callAndLogCleanup(t *testing.T, f func() error) func() {
 }
 
 func TestNewMySQLSource(t *testing.T) {
-	directoriesTableName := "test_create_directories"
-	rulesTableName := "test_create_rules"
+	Convey("You can create a MySQL source", t, func() {
+		directoriesTableName := "test_create_directories"
+		rulesTableName := "test_create_rules"
 
-	sq, err := NewMySQLSourceFromEnv(directoriesTableName, rulesTableName)
-	if err != nil {
-		if errors.Is(err, ErrMissingArgument) {
+		sq, err := NewMySQLSourceFromEnv(directoriesTableName, rulesTableName)
+		if err != nil && errors.Is(err, ErrMissingArgument) {
 			t.Skip("Skipping MySQL test because MySQL host, port, user, pass, or database is not set.")
 		}
 
-		t.Fatal(err)
-	}
+		So(err, ShouldBeNil)
 
-	t.Cleanup(callAndLogCleanup(t, sq.Close))
-	t.Cleanup(callAndLogCleanup(t, sq.DropTables))
+		t.Cleanup(callAndLogCleanup(t, sq.Close))
+		t.Cleanup(callAndLogCleanup(t, sq.DropTables))
 
-	tableNames, err := sq.ShowTables()
-	if err != nil {
-		t.Fatal(err)
-	}
+		tableNames, err := sq.ShowTables()
+		So(err, ShouldBeNil)
 
-	for _, tableName := range []string{directoriesTableName, rulesTableName} {
-		So(tableNames, ShouldContain, tableName)
-	}
+		for _, tableName := range []string{directoriesTableName, rulesTableName} {
+			So(tableNames, ShouldContain, tableName)
+		}
+	})
 }
 
 func setupMySQLSourceForTest(t *testing.T) SQLSourceInterface {
@@ -164,7 +163,39 @@ func TestSQLSourceInterface(t *testing.T) {
 					result, err := sq.GetDirectory(id)
 					So(err, ShouldBeNil)
 					So(result.ClaimedBy, ShouldEqual, "testUser")
+
+					Convey("You can reclaim a directory", func() {
+						err = sq.ClaimDirectory(id, "testUser2")
+						So(err, ShouldBeNil)
+
+						result, err := sq.GetDirectory(id)
+						So(err, ShouldBeNil)
+						So(result.ClaimedBy, ShouldEqual, "testUser2")
+					})
 				})
+
+				Convey("And a valid rule", func() {
+					rule := Rule{
+						BackupType: "backup",
+					}
+
+					rule.SetDefaults()
+
+					Convey("You can set a rule for a directory", func() {
+						err = sq.SetRule(id, rule)
+						So(err, ShouldBeNil)
+
+						rule.ID = 1
+						rule.ReviewAt = rule.ReviewAt.Truncate(24 * time.Hour)
+						rule.DeleteAt = rule.DeleteAt.Truncate(24 * time.Hour)
+
+						result, err := sq.GetDirectory(id)
+						So(err, ShouldBeNil)
+						So(result.Rules, ShouldHaveLength, 1)
+						So(result.Rules[0], ShouldResemble, &rule)
+					})
+				})
+
 			})
 
 			Convey("You can add a directory with a claimed user", func() {

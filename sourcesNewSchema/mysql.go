@@ -15,6 +15,8 @@ const createMySQLDirectoriesTableTmpl = `CREATE TABLE IF NOT EXISTS %s (
 	faculty VARCHAR(30) NOT NULL,
     programme VARCHAR(30) NOT NULL,
 	claimedBy VARCHAR(10),
+    created DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	modified DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     
     UNIQUE KEY ux_path_hash (path_hash)
 
@@ -26,9 +28,11 @@ const createMySQLRulesTableTmpl = `CREATE TABLE IF NOT EXISTS %s (
 	backupType TINYTEXT NOT NULL,
 	backupMetadata TEXT,
 	backupFrequency SMALLINT UNSIGNED NOT NULL,
-	reviewAt DATE,
-	deleteAt DATE,
-	wildcardMatch TEXT,
+	wildcardMatch TEXT NOT NULL,
+	reviewAt DATE NOT NULL,
+	deleteAt DATE NOT NULL,
+	created DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	modified DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
 	
 	FOREIGN KEY (directoryID) REFERENCES %s(id) ON DELETE CASCADE
 )`
@@ -69,7 +73,7 @@ func NewMySQLSource(host, port, user, password, dbName, directoriesTableName,
 		return nil, fmt.Errorf("%w: %v\n", ErrMissingArgument, missing)
 	}
 
-	address := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s", user, password, host, port, dbName)
+	address := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?parseTime=true", user, password, host, port, dbName)
 
 	db, err := sql.Open("mysql", address)
 	if err != nil {

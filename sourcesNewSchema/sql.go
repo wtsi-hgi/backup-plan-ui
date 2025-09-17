@@ -21,6 +21,14 @@ const dropTableSQLTmpl = "DROP TABLE IF EXISTS %s"
 const insertDirectoryTmpl = "INSERT INTO %s (path, faculty, programme, claimedBy) VALUES (?, ?, ?, ?)"
 const selectDirectoryTmpl = "SELECT id, path, faculty, programme, claimedBy FROM %s WHERE id = ?"
 const claimDirectoryTmpl = "UPDATE %s SET claimedBy = ? WHERE id = ?"
+const insertRuleTmpl = `INSERT INTO %s
+	(directoryID, backupType, backupMetadata, backupFrequency, reviewAt, deleteAt, wildcardMatch)
+	VALUES (?, ?, ?, ?, DATE(?), DATE(?), ?)
+`
+const selectRulesTmpl = `SELECT 
+    id, backupType, backupMetadata, backupFrequency, reviewAt, deleteAt, wildcardMatch
+	FROM %s WHERE directoryID = ?
+`
 
 var DefaultTables = []string{DefaultDirectoriesTableName, DefaultRulesTableName}
 
@@ -40,6 +48,7 @@ type SQLSourceInterface interface {
 	AddDirectory(directory Directory) (uint, error)
 	GetDirectory(id uint) (*Directory, error)
 	ClaimDirectory(id uint, user string) error
+	SetRule(id uint, rule Rule) error
 }
 
 // SQLSource is a type for shared functionality between MySQL and SQLite.
@@ -145,6 +154,20 @@ func (sq SQLSource) GetDirectory(id uint) (*Directory, error) {
 
 	row := sq.db.QueryRow(stmt, id)
 
+	directory, err := sq.scanDirectory(row)
+	if err != nil {
+		return nil, err
+	}
+
+	directory.Rules, err = sq.GetRules(id)
+	if err != nil {
+		return nil, err
+	}
+
+	return directory, nil
+}
+
+func (sq SQLSource) scanDirectory(row scanner) (*Directory, error) {
 	var directory Directory
 
 	err := row.Scan(&directory.ID, &directory.Path, &directory.Faculty, &directory.Programme, &directory.ClaimedBy)
@@ -157,6 +180,42 @@ func (sq SQLSource) GetDirectory(id uint) (*Directory, error) {
 	}
 
 	return &directory, nil
+}
+
+func (sq SQLSource) GetRules(id uint) ([]*Rule, error) {
+	stmt := fmt.Sprintf(selectRulesTmpl, sq.rulesTableName)
+
+	rows, err := sq.db.Query(stmt, id)
+	if err != nil {
+		return nil, err
+	}
+
+	defer callAndLogError(rows.Close)
+
+	var rules []*Rule //nolint:prealloc
+
+	for rows.Next() {
+		rule, err := sq.scanRule(rows)
+		if err != nil {
+			return nil, err
+		}
+
+		rules = append(rules, rule)
+	}
+
+	return rules, nil
+}
+
+func (sq SQLSource) scanRule(row scanner) (*Rule, error) {
+	var rule Rule
+
+	err := row.Scan(&rule.ID, &rule.BackupType, &rule.BackupMetadata, &rule.BackupFrequency, &rule.ReviewAt,
+		&rule.DeleteAt, &rule.WildcardMatch)
+	if err != nil {
+		return nil, err
+	}
+
+	return &rule, nil
 }
 
 func (sq SQLSource) ClaimDirectory(id uint, user string) error {
@@ -174,6 +233,27 @@ func (sq SQLSource) ClaimDirectory(id uint, user string) error {
 
 	if n == 0 {
 		return ErrNoDirectory
+	}
+
+	return nil
+}
+
+func (sq SQLSource) SetRule(id uint, rule Rule) error {
+	err := rule.IsValid()
+	if err != nil {
+		return err
+	}
+
+	stmt := fmt.Sprintf(insertRuleTmpl, sq.rulesTableName)
+
+	_, err = sq.db.Exec(stmt, id, rule.BackupType, rule.BackupMetadata, rule.BackupFrequency, rule.ReviewAt,
+		rule.DeleteAt, rule.WildcardMatch)
+	if err != nil {
+		if strings.Contains(err.Error(), "random string") {
+			return ErrNoDirectory
+		}
+
+		return err
 	}
 
 	return nil
