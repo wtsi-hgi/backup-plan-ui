@@ -2,23 +2,29 @@ package sourcesNewSchema
 
 import (
 	"database/sql"
+	"errors"
 	"fmt"
 	"log/slog"
+	"strings"
+
+	_ "github.com/go-sql-driver/mysql"
+	_ "github.com/mattn/go-sqlite3"
 )
 
 const (
-	DefaultUsersTableName       = "users"
 	DefaultDirectoriesTableName = "directories"
 	DefaultRulesTableName       = "rules"
 )
 
 const dropTableSQLTmpl = "DROP TABLE IF EXISTS %s"
 
-const insertUserTmpl = "INSERT INTO %s (userName, faculty, programme) VALUES (?, ?, ?)"
+const insertDirectoryTmpl = "INSERT INTO %s (path, faculty, programme, claimedBy) VALUES (?, ?, ?, ?)"
+const selectDirectoryTmpl = "SELECT id, path, faculty, programme, claimedBy FROM %s WHERE id = ?"
 
-const selectUserTmpl = "SELECT id, userName, faculty, programme FROM %s WHERE id = ?"
+var DefaultTables = []string{DefaultDirectoriesTableName, DefaultRulesTableName}
 
-var DefaultTables = []string{DefaultUsersTableName, DefaultDirectoriesTableName, DefaultRulesTableName}
+var ErrDirectoryDuplicate = errors.New("directory already exists")
+var ErrNoDirectory = errors.New("no such directory")
 
 type scanner interface {
 	Scan(dest ...any) error
@@ -30,16 +36,16 @@ type SQLSourceInterface interface {
 	ShowTables() ([]string, error)
 	DropTable(tableName string) error
 	DropTables() error
-	AddUser(user User) (uint16, error)
-	GetUser(id uint16) (*User, error)
+	AddDirectory(directory Directory) (uint, error)
+	GetDirectory(id uint) (*Directory, error)
 }
 
 // SQLSource is a type for shared functionality between MySQL and SQLite.
 type SQLSource struct {
 	db                   *sql.DB
-	usersTableName       string
 	directoriesTableName string
 	rulesTableName       string
+	dupRowsError         string
 }
 
 func (sq SQLSource) Close() error {
@@ -75,15 +81,9 @@ func callAndLogError(f func() error) {
 	}
 }
 
-func (sq SQLSource) init(usersTmpl, directoriesTmpl, rulesTmpl string) error {
-	stmt := fmt.Sprintf(usersTmpl, sq.usersTableName)
+func (sq SQLSource) init(directoriesTmpl, rulesTmpl string) error {
+	stmt := fmt.Sprintf(directoriesTmpl, sq.directoriesTableName)
 	_, err := sq.db.Exec(stmt)
-	if err != nil {
-		return err
-	}
-
-	stmt = fmt.Sprintf(directoriesTmpl, sq.directoriesTableName, sq.usersTableName)
-	_, err = sq.db.Exec(stmt)
 	if err != nil {
 		return err
 	}
@@ -101,7 +101,7 @@ func (sq SQLSource) createTable(stmt string) error {
 }
 
 func (sq SQLSource) DropTables() error {
-	for _, tableName := range []string{sq.rulesTableName, sq.directoriesTableName, sq.usersTableName} {
+	for _, tableName := range []string{sq.rulesTableName, sq.directoriesTableName} {
 		err := sq.DropTable(tableName)
 		if err != nil {
 			return err
@@ -118,11 +118,15 @@ func (sq SQLSource) DropTable(tableName string) error {
 	return err
 }
 
-func (sq SQLSource) AddUser(user User) (uint16, error) {
-	stmt := fmt.Sprintf(insertUserTmpl, sq.usersTableName)
+func (sq SQLSource) AddDirectory(directory Directory) (uint, error) {
+	stmt := fmt.Sprintf(insertDirectoryTmpl, sq.directoriesTableName)
 
-	result, err := sq.db.Exec(stmt, user.Username, user.Faculty, user.Programme)
+	result, err := sq.db.Exec(stmt, directory.Path, directory.Faculty, directory.Programme, directory.ClaimedBy)
 	if err != nil {
+		if strings.Contains(err.Error(), sq.dupRowsError) {
+			return 0, ErrDirectoryDuplicate
+		}
+
 		return 0, err
 	}
 
@@ -131,20 +135,24 @@ func (sq SQLSource) AddUser(user User) (uint16, error) {
 		return 0, err
 	}
 
-	return uint16(id), nil
+	return uint(id), nil
 }
 
-func (sq SQLSource) GetUser(id uint16) (*User, error) {
-	stmt := fmt.Sprintf(selectUserTmpl, sq.usersTableName)
+func (sq SQLSource) GetDirectory(id uint) (*Directory, error) {
+	stmt := fmt.Sprintf(selectDirectoryTmpl, sq.directoriesTableName)
 
 	row := sq.db.QueryRow(stmt, id)
 
-	var user User
+	var directory Directory
 
-	err := row.Scan(&user.ID, &user.Username, &user.Faculty, &user.Programme)
+	err := row.Scan(&directory.ID, &directory.Path, &directory.Faculty, &directory.Programme, &directory.ClaimedBy)
 	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, ErrNoDirectory
+		}
+
 		return nil, err
 	}
 
-	return &user, nil
+	return &directory, nil
 }

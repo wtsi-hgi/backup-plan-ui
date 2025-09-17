@@ -4,19 +4,12 @@ import (
 	"database/sql"
 )
 
-const createSQLiteUsersTableTmpl = `CREATE TABLE %s (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    userName TEXT NOT NULL,
-    faculty TEXT NOT NULL,
-    programme TEXT NOT NULL
-)`
-
 const createSQLiteDirectoriesTableTmpl = `CREATE TABLE %s (
 	id INTEGER PRIMARY KEY AUTOINCREMENT,
-	path TEXT NOT NULL,
-	claimedByUserID INTEGER,
-	
-	FOREIGN KEY (claimedByUserID) REFERENCES %s(id) ON DELETE SET NULL
+	path TEXT NOT NULL UNIQUE,
+	faculty TEXT NOT NULL,
+    programme TEXT NOT NULL,
+	claimedBy TEXT
 )`
 
 const createSQLiteRulesTableTmpl = `CREATE TABLE %s (
@@ -38,7 +31,7 @@ type SQLiteSource struct {
 	*SQLSource
 }
 
-// NewSQLiteSource opens a connection to an SQLite database at the given path and stores it internally.
+// NewSQLiteSource opens a connection to an SQLite database at the given Path and stores it internally.
 // It also creates a table with the given name if it does not exist.
 // You are responsible to close the connection using Close().
 func NewSQLiteSource(path string) (*SQLiteSource, error) {
@@ -51,9 +44,9 @@ func NewSQLiteSource(path string) (*SQLiteSource, error) {
 	sq := &SQLiteSource{
 		&SQLSource{
 			db:                   db,
-			usersTableName:       DefaultUsersTableName,
 			directoriesTableName: DefaultDirectoriesTableName,
 			rulesTableName:       DefaultRulesTableName,
+			dupRowsError:         "UNIQUE constraint failed",
 		},
 	}
 
@@ -66,7 +59,6 @@ func (sq SQLiteSource) ShowTables() ([]string, error) {
 
 func (sq SQLiteSource) Init() error {
 	return sq.init(
-		createSQLiteUsersTableTmpl,
 		createSQLiteDirectoriesTableTmpl,
 		createSQLiteRulesTableTmpl,
 	)

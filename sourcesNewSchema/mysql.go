@@ -8,19 +8,16 @@ import (
 	"slices"
 )
 
-const createMySQLUsersTableTmpl = `CREATE TABLE IF NOT EXISTS %s (
-    id INT UNSIGNED PRIMARY KEY AUTO_INCREMENT,
-    userName VARCHAR(10) NOT NULL,
-    faculty VARCHAR(30) NOT NULL,
-    programme VARCHAR(30) NOT NULL
-)`
-
 const createMySQLDirectoriesTableTmpl = `CREATE TABLE IF NOT EXISTS %s (
 	id INT UNSIGNED PRIMARY KEY AUTO_INCREMENT,
 	path TEXT NOT NULL,
-	claimedByUserID INT UNSIGNED,
-	
-	FOREIGN KEY (claimedByUserID) REFERENCES %s(id) ON DELETE SET NULL
+	path_hash BINARY(32) GENERATED ALWAYS AS (UNHEX(SHA2(path, 256))) VIRTUAL,
+	faculty VARCHAR(30) NOT NULL,
+    programme VARCHAR(30) NOT NULL,
+	claimedBy VARCHAR(10),
+    
+    UNIQUE KEY ux_path_hash (path_hash)
+
 )`
 
 const createMySQLRulesTableTmpl = `CREATE TABLE IF NOT EXISTS %s (
@@ -42,7 +39,7 @@ type MySQLSource struct {
 	*SQLSource
 }
 
-func NewMySQLSourceFromEnv(usersTableName, directoriesTableName, rulesTableName string,
+func NewMySQLSourceFromEnv(directoriesTableName, rulesTableName string,
 ) (*MySQLSource, error) {
 	return NewMySQLSource(
 		os.Getenv("MYSQL_HOST"),
@@ -50,7 +47,6 @@ func NewMySQLSourceFromEnv(usersTableName, directoriesTableName, rulesTableName 
 		os.Getenv("MYSQL_USER"),
 		os.Getenv("MYSQL_PASS"),
 		os.Getenv("MYSQL_DATABASE"),
-		usersTableName,
 		directoriesTableName,
 		rulesTableName,
 	)
@@ -59,7 +55,7 @@ func NewMySQLSourceFromEnv(usersTableName, directoriesTableName, rulesTableName 
 // NewMySQLSource opens a connection to a MySQL database using given credentials and stores it internally.
 // It also creates a table with the given name if it does not exist.
 // You are responsible to close the connection using Close().
-func NewMySQLSource(host, port, user, password, dbName, usersTableName, directoriesTableName,
+func NewMySQLSource(host, port, user, password, dbName, directoriesTableName,
 	rulesTableName string) (*MySQLSource, error) {
 	var missing []string
 
@@ -83,9 +79,9 @@ func NewMySQLSource(host, port, user, password, dbName, usersTableName, director
 	sq := &MySQLSource{
 		&SQLSource{
 			db:                   db,
-			usersTableName:       usersTableName,
 			directoriesTableName: directoriesTableName,
 			rulesTableName:       rulesTableName,
+			dupRowsError:         "Duplicate entry",
 		},
 	}
 
@@ -109,7 +105,7 @@ func (sq MySQLSource) Init() error {
 	}
 
 	initialised := true
-	requiredTables := []string{sq.usersTableName, sq.directoriesTableName, sq.rulesTableName}
+	requiredTables := []string{sq.directoriesTableName, sq.rulesTableName}
 
 	for _, requiredTable := range requiredTables {
 		if !slices.Contains(tables, requiredTable) {
@@ -124,7 +120,6 @@ func (sq MySQLSource) Init() error {
 	}
 
 	return sq.init(
-		createMySQLUsersTableTmpl,
 		createMySQLDirectoriesTableTmpl,
 		createMySQLRulesTableTmpl,
 	)

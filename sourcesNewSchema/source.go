@@ -1,8 +1,9 @@
 package sourcesNewSchema
 
-type User struct {
-	ID        uint16
-	Username  string
+type Directory struct {
+	ID        uint
+	Path      string
 	Faculty   string
 	Programme string
+	ClaimedBy string
 }

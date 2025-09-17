@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	. "github.com/smarty/assertions"
+	. "github.com/smartystreets/goconvey/convey"
 )
 
 var sqlTestCases = []struct {
@@ -34,9 +34,7 @@ func TestNewSQLiteSource(t *testing.T) {
 	}
 
 	for _, tableName := range DefaultTables {
-		if ok, err := So(tableNames, ShouldContain, tableName); !ok {
-			t.Error(err)
-		}
+		So(tableNames, ShouldContain, tableName)
 	}
 }
 
@@ -52,11 +50,10 @@ func callAndLogCleanup(t *testing.T, f func() error) func() {
 }
 
 func TestNewMySQLSource(t *testing.T) {
-	usersTableName := "test_create_users"
 	directoriesTableName := "test_create_directories"
 	rulesTableName := "test_create_rules"
 
-	sq, err := NewMySQLSourceFromEnv(usersTableName, directoriesTableName, rulesTableName)
+	sq, err := NewMySQLSourceFromEnv(directoriesTableName, rulesTableName)
 	if err != nil {
 		if errors.Is(err, ErrMissingArgument) {
 			t.Skip("Skipping MySQL test because MySQL host, port, user, pass, or database is not set.")
@@ -73,10 +70,8 @@ func TestNewMySQLSource(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	for _, tableName := range []string{usersTableName, directoriesTableName, rulesTableName} {
-		if ok, err := So(tableNames, ShouldContain, tableName); !ok {
-			t.Error(err)
-		}
+	for _, tableName := range []string{directoriesTableName, rulesTableName} {
+		So(tableNames, ShouldContain, tableName)
 	}
 }
 
@@ -85,12 +80,15 @@ func setupMySQLSourceForTest(t *testing.T) SQLSourceInterface {
 
 	suffix := rand.Int()
 
-	userTableName := fmt.Sprintf("test_user_%d", suffix)
 	directoryTableName := fmt.Sprintf("test_directory_%d", suffix)
 	ruleTableName := fmt.Sprintf("test_rule_%d", suffix)
 
-	sq, err := NewMySQLSourceFromEnv(userTableName, directoryTableName, ruleTableName)
+	sq, err := NewMySQLSourceFromEnv(directoryTableName, ruleTableName)
 	if err != nil {
+		if errors.Is(err, ErrMissingArgument) {
+			t.Skip("Skipping MySQL test because MySQL host, port, user, pass, or database is not set.")
+		}
+
 		t.Fatal(err)
 	}
 
@@ -115,52 +113,62 @@ func setupSQLiteSourceForTest(t *testing.T) SQLSourceInterface {
 	return sq
 }
 
-func TestSQLSourceInterface_AddUser(t *testing.T) {
+func TestSQLSourceInterface_AddDirectory(t *testing.T) {
 	for _, tc := range sqlTestCases {
-		t.Run(tc.name, func(t *testing.T) {
+		Convey(fmt.Sprintf("Given a %s connection", tc.name), t, func() {
 			sq := tc.setup(t)
 
-			user := User{0, "test_user", "test_faculty", "test_programme"}
+			Convey("You can add a directory", func() {
+				directory := Directory{
+					Path:      "/path",
+					Faculty:   "test",
+					Programme: "test",
+				}
 
-			id, err := sq.AddUser(user)
-			if err != nil {
-				t.Fatal(err)
-			}
+				id, err := sq.AddDirectory(directory)
+				So(err, ShouldBeNil)
+				So(id, ShouldBeGreaterThan, 0)
 
-			if ok, err := So(id, ShouldBeGreaterThan, 0); !ok {
-				t.Error(err)
-			}
+				Convey("You cannot add a directory with the same path", func() {
+					directory2 := directory
+
+					directory.Faculty = "test2"
+					directory2.Programme = "test2"
+
+					_, err = sq.AddDirectory(directory2)
+					So(err, ShouldEqual, ErrDirectoryDuplicate)
+				})
+			})
 		})
 	}
 }
 
-func TestSQLSourceInterface_GetUser(t *testing.T) {
+func TestSQLSourceInterface_GetDirectory(t *testing.T) {
 	for _, tc := range sqlTestCases {
-		t.Run(tc.name, func(t *testing.T) {
+		Convey(fmt.Sprintf("Given a %s connection", tc.name), t, func() {
 			sq := tc.setup(t)
 
-			user := User{0, "test_user", "test_faculty", "test_programme"}
+			Convey("You cannot get non-existent directory", func() {
+				_, err := sq.GetDirectory(1)
+				So(err, ShouldEqual, ErrNoDirectory)
+			})
 
-			id, err := sq.AddUser(user)
-			if err != nil {
-				t.Fatal(err)
-			}
+			Convey("You can get existing directory", func() {
+				directory := Directory{
+					Path:      "/path",
+					Faculty:   "test",
+					Programme: "test",
+				}
 
-			result, err := sq.GetUser(id)
-			if err != nil {
-				t.Fatal(err)
-			}
+				id, err := sq.AddDirectory(directory)
+				So(err, ShouldBeNil)
 
-			if ok, err := So(result, ShouldNotBeNil); !ok {
-				t.Fatal(err)
-			}
+				result, err := sq.GetDirectory(id)
+				So(err, ShouldBeNil)
 
-			user.ID = id
-
-			if ok, err := So(result, ShouldResemble, &user); !ok {
-				t.Error(err)
-			}
-
+				directory.ID = id
+				So(result, ShouldResemble, &directory)
+			})
 		})
 	}
 }
