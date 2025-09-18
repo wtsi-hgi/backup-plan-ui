@@ -206,7 +206,7 @@ func TestSQLSourceInterface(t *testing.T) {
 
 				Convey("And a valid rule", func() {
 					rule := Rule{
-						BackupType: "backup",
+						BackupType: Backup,
 					}
 
 					rule.SetDefaults()
@@ -235,7 +235,7 @@ func TestSQLSourceInterface(t *testing.T) {
 						})
 
 						Convey("You can update a rule for a directory", func() {
-							rule.BackupType = "test"
+							rule.BackupType = NoBackup
 
 							err = sq.UpdateRule(rule.ID, rule)
 							So(err, ShouldBeNil)
@@ -243,7 +243,7 @@ func TestSQLSourceInterface(t *testing.T) {
 							result, err = sq.GetDirectory(id)
 							So(err, ShouldBeNil)
 							So(result.Rules, ShouldHaveLength, 1)
-							So(result.Rules[0].BackupType, ShouldResemble, "test")
+							So(result.Rules[0].BackupType, ShouldResemble, NoBackup)
 						})
 					})
 				})
@@ -262,7 +262,7 @@ func TestSQLSourceInterface(t *testing.T) {
 
 			Convey("Given a valid rule", func() {
 				rule := Rule{
-					BackupType: "backup",
+					BackupType: Backup,
 				}
 
 				rule.SetDefaults()

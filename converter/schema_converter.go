@@ -11,6 +11,8 @@ import (
 	"github.com/wtsi-hgi/backup-plan-ui/sourcesNewSchema"
 )
 
+var ErrInvalidInstruction = errors.New("invalid instruction")
+
 func ConvertSchema(sourceTableName, dirsTableName, rulesTableName string, dropTable bool) error {
 	oldDB, err := sources.NewMySQLSource(
 		os.Getenv("SOURCE_MYSQL_HOST"),
@@ -34,12 +36,7 @@ func ConvertSchema(sourceTableName, dirsTableName, rulesTableName string, dropTa
 	defer callAndLogError(newDB.Close)
 
 	if dropTable {
-		err = newDB.DropTables()
-		if err != nil {
-			return err
-		}
-
-		err = newDB.Init()
+		err = resetDB(newDB)
 		if err != nil {
 			return err
 		}
@@ -53,6 +50,15 @@ func callAndLogError(f func() error) {
 	if err != nil {
 		slog.Error(err.Error())
 	}
+}
+
+func resetDB(db *sourcesNewSchema.MySQLSource) error {
+	err := db.DropTables()
+	if err != nil {
+		return err
+	}
+
+	return db.Init()
 }
 
 func convertDBSchema(oldDB sources.MySQLSource, newDB *sourcesNewSchema.MySQLSource) error {
@@ -84,8 +90,13 @@ func convertEntry(entry *sources.Entry) (sourcesNewSchema.Directory, error) {
 		ClaimedBy: entry.Requestor,
 	}
 
+	backupType, err := convertInstruction(entry.Instruction)
+	if err != nil {
+		return directory, err
+	}
+
 	baseRule := sourcesNewSchema.Rule{
-		BackupType:     string(entry.Instruction),
+		BackupType:     backupType,
 		BackupMetadata: entry.Metadata,
 		WildcardMatch:  entry.Match,
 	}
@@ -95,13 +106,28 @@ func convertEntry(entry *sources.Entry) (sourcesNewSchema.Directory, error) {
 	addRulesByPattern(&directory, baseRule, baseRule.WildcardMatch)
 
 	if entry.Ignore != "" {
-		baseRule.BackupType = string(sources.NoBackup)
+		baseRule.BackupType = sourcesNewSchema.NoBackup
 		baseRule.BackupFrequency = 0
 
 		addRulesByPattern(&directory, baseRule, entry.Ignore)
 	}
 
 	return directory, nil
+}
+
+func convertInstruction(instruction sources.Instruction) (sourcesNewSchema.Instruction, error) {
+	switch instruction {
+	case sources.Backup:
+		return sourcesNewSchema.Backup, nil
+	case sources.NoBackup:
+		return sourcesNewSchema.NoBackup, nil
+	case sources.TempBackup:
+		return sourcesNewSchema.TempBackup, nil
+	case sources.ManualBackup:
+		return sourcesNewSchema.ManualBackup, nil
+	default:
+		return "", fmt.Errorf("%w: %s", ErrInvalidInstruction, instruction)
+	}
 }
 
 func addRulesByPattern(directory *sourcesNewSchema.Directory, baseRule sourcesNewSchema.Rule, patterns string) {

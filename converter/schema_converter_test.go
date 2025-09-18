@@ -147,7 +147,8 @@ func compareEntryAndDirectory(t *testing.T, entry *sources.Entry, directory *sou
 	So(isInstructionInRules(entry.Instruction, entry.Match, entry.Ignore, directory.Rules), ShouldBeTrue)
 }
 
-func isInstructionInRules(instruction sources.Instruction, match string, ignore string, rules []sourcesNewSchema.Rule) bool {
+func isInstructionInRules(instruction sources.Instruction, match string, ignore string, rules []sourcesNewSchema.Rule,
+) bool {
 	matchPresent := false
 	ignorePresent := true
 
@@ -167,7 +168,7 @@ func isInstructionInRules(instruction sources.Instruction, match string, ignore 
 }
 
 func ruleResemblesInstruction(instruction sources.Instruction, match string, rule sourcesNewSchema.Rule) bool {
-	if rule.BackupType != string(instruction) {
+	if string(rule.BackupType) != string(instruction) {
 		return false
 	}
 

@@ -46,7 +46,7 @@ func TestRule(t *testing.T) {
 		{
 			name: "not set default BackupFrequency for NoBackup",
 			setup: func(r Rule) Rule {
-				r.BackupType = "nobackup"
+				r.BackupType = NoBackup
 
 				return r
 			},
@@ -57,7 +57,7 @@ func TestRule(t *testing.T) {
 		{
 			name: "not set default BackupFrequency for manual backup",
 			setup: func(r Rule) Rule {
-				r.BackupType = "manual backup"
+				r.BackupType = ManualBackup
 
 				return r
 			},

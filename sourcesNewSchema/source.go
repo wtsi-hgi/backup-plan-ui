@@ -1,7 +1,9 @@
 package sourcesNewSchema
 
 import (
+	"errors"
 	"fmt"
+	"strings"
 	"time"
 )
 
@@ -26,6 +28,34 @@ type DataSource interface {
 	DeleteRule(id uint) error
 }
 
+type Instruction string
+
+const (
+	Backup       Instruction = "backup"
+	NoBackup     Instruction = "nobackup"
+	TempBackup   Instruction = "tempbackup"
+	ManualBackup Instruction = "manual backup"
+)
+
+var instructionLookup = map[string]Instruction{
+	string(Backup):       Backup,
+	string(NoBackup):     NoBackup,
+	string(TempBackup):   TempBackup,
+	string(ManualBackup): ManualBackup,
+}
+
+var ErrWrongInstruction = errors.New("wrong instruction")
+
+// ParseInstruction parses a string into a valid Instruction.
+func ParseInstruction(s string) (Instruction, error) {
+	normalised := strings.TrimSpace(s)
+	if v, ok := instructionLookup[normalised]; ok {
+		return v, nil
+	}
+
+	return "", fmt.Errorf("%w: %s", ErrWrongInstruction, s)
+}
+
 type Directory struct {
 	ID        uint
 	Path      string
@@ -37,7 +67,7 @@ type Directory struct {
 
 type Rule struct {
 	ID              uint
-	BackupType      string
+	BackupType      Instruction
 	BackupMetadata  string
 	BackupFrequency int
 	ReviewAt        time.Time
@@ -71,7 +101,7 @@ func (r *Rule) IsValid() error {
 
 func (r *Rule) SetDefaults() {
 	if r.BackupFrequency == 0 {
-		if r.BackupType != "nobackup" && r.BackupType != "manual backup" {
+		if r.BackupType != NoBackup && r.BackupType != ManualBackup {
 			r.BackupFrequency = DefaultBackupFrequency
 		}
 	}
