@@ -175,7 +175,7 @@ func TestSQLSourceInterface(t *testing.T) {
 					directory2.Programme = "test2"
 
 					_, err = sq.AddDirectory(directory2)
-					So(err, ShouldEqual, ErrDirectoryDuplicate)
+					So(err, ShouldWrap, ErrDirectoryDuplicate)
 				})
 
 				Convey("You can claim a directory", func() {

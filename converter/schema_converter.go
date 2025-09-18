@@ -4,13 +4,22 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"os"
+	"strings"
 
 	"github.com/wtsi-hgi/backup-plan-ui/sources"
 	"github.com/wtsi-hgi/backup-plan-ui/sourcesNewSchema"
 )
 
 func ConvertSchema(sourceTableName, dirsTableName, rulesTableName string, dropTable bool) error {
-	oldDB, err := sources.NewMySQLSourceFromEnv(sourceTableName)
+	oldDB, err := sources.NewMySQLSource(
+		os.Getenv("SOURCE_MYSQL_HOST"),
+		os.Getenv("SOURCE_MYSQL_PORT"),
+		os.Getenv("SOURCE_MYSQL_USER"),
+		os.Getenv("SOURCE_MYSQL_PASS"),
+		os.Getenv("SOURCE_MYSQL_DATABASE"),
+		sourceTableName,
+	)
 	if err != nil {
 		return err
 	}
@@ -23,6 +32,18 @@ func ConvertSchema(sourceTableName, dirsTableName, rulesTableName string, dropTa
 	}
 
 	defer callAndLogError(newDB.Close)
+
+	if dropTable {
+		err = newDB.DropTables()
+		if err != nil {
+			return err
+		}
+
+		err = newDB.Init()
+		if err != nil {
+			return err
+		}
+	}
 
 	return convertDBSchema(oldDB, newDB)
 }
@@ -63,24 +84,32 @@ func convertEntry(entry *sources.Entry) (sourcesNewSchema.Directory, error) {
 		ClaimedBy: entry.Requestor,
 	}
 
-	rule := sourcesNewSchema.Rule{
+	baseRule := sourcesNewSchema.Rule{
 		BackupType:     string(entry.Instruction),
 		BackupMetadata: entry.Metadata,
 		WildcardMatch:  entry.Match,
 	}
 
-	rule.SetDefaults()
+	baseRule.SetDefaults()
 
-	directory.AddRule(rule)
+	addRulesByPattern(&directory, baseRule, baseRule.WildcardMatch)
 
 	if entry.Ignore != "" {
-		rule.BackupType = string(sources.NoBackup)
-		rule.WildcardMatch = entry.Ignore
+		baseRule.BackupType = string(sources.NoBackup)
+		baseRule.BackupFrequency = 0
 
-		directory.AddRule(rule)
+		addRulesByPattern(&directory, baseRule, entry.Ignore)
 	}
 
 	return directory, nil
+}
+
+func addRulesByPattern(directory *sourcesNewSchema.Directory, baseRule sourcesNewSchema.Rule, patterns string) {
+	for _, pattern := range strings.Split(patterns, " ") {
+		baseRule.WildcardMatch = pattern
+
+		directory.AddRule(baseRule)
+	}
 }
 
 func addOrUpdateDirectory(directory sourcesNewSchema.Directory, db *sourcesNewSchema.MySQLSource) error {

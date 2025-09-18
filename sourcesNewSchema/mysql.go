@@ -27,7 +27,7 @@ const createMySQLRulesTableTmpl = `CREATE TABLE IF NOT EXISTS %s (
 	directoryID INT UNSIGNED NOT NULL,
 	backupType TINYTEXT NOT NULL,
 	backupMetadata TEXT,
-	backupFrequency SMALLINT UNSIGNED NOT NULL,
+	backupFrequency SMALLINT UNSIGNED,
 	wildcardMatch TEXT NOT NULL,
 	reviewAt DATE NOT NULL,
 	deleteAt DATE NOT NULL,

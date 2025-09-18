@@ -127,14 +127,17 @@ func (sq SQLSource) DropTables() error {
 func (sq SQLSource) DropTable(tableName string) error {
 	stmt := fmt.Sprintf(dropTableSQLTmpl, tableName)
 	_, err := sq.db.Exec(stmt)
+	if err != nil {
+		return fmt.Errorf("failed to drop a table %s: %w", tableName, err)
+	}
 
-	return err
+	return nil
 }
 
 func (sq SQLSource) AddDirectory(directory Directory) (id uint, err error) {
 	tx, err := sq.db.Begin()
 	if err != nil {
-		return 0, err
+		return 0, fmt.Errorf("failed to begin transaction: %w", err)
 	}
 
 	defer func() {
@@ -147,13 +150,13 @@ func (sq SQLSource) AddDirectory(directory Directory) (id uint, err error) {
 
 	id, err = sq.insertDirectory(tx, directory)
 	if err != nil {
-		return 0, err
+		return 0, fmt.Errorf("failed to insert directory %s: %w", directory.Path, err)
 	}
 
 	for _, rule := range directory.Rules {
 		_, err = sq.setRule(tx, id, rule)
 		if err != nil {
-			return 0, err
+			return 0, fmt.Errorf("failed to set rule %s: %w", rule.BackupType, err)
 		}
 	}
 

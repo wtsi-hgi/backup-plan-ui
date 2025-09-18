@@ -10,6 +10,72 @@ import (
 	"github.com/wtsi-hgi/backup-plan-ui/sourcesNewSchema"
 )
 
+func TestConvertEntry(t *testing.T) {
+	Convey("Given a minimal test entry", t, func() {
+		entry := sources.Entry{
+			ReportingName: "Test Project",
+			ReportingRoot: "/path",
+			Directory:     "/path/project",
+			Instruction:   sources.Backup,
+			Faculty:       "Test Faculty",
+			Requestor:     "Test User",
+		}
+
+		Convey("You can convert it to a directory", func() {
+			directory, err := convertEntry(&entry)
+			So(err, ShouldBeNil)
+
+			So(directory.Path, ShouldEqual, entry.Directory)
+			So(directory.Faculty, ShouldEqual, entry.Faculty)
+			So(directory.ClaimedBy, ShouldEqual, entry.Requestor)
+
+			Convey("With a default rule", func() {
+				So(directory.Rules, ShouldHaveLength, 1)
+
+				So(directory.Rules[0].BackupType, ShouldEqual, string(entry.Instruction))
+				So(directory.Rules[0].WildcardMatch, ShouldEqual, "*")
+			})
+		})
+
+		Convey("With two match patterns", func() {
+			entry.Match = "*.sh *.txt"
+
+			Convey("Convert will make two rules", func() {
+				directory, err := convertEntry(&entry)
+				So(err, ShouldBeNil)
+
+				So(directory.Rules, ShouldHaveLength, 2)
+
+				So(directory.Rules[0].BackupType, ShouldEqual, string(entry.Instruction))
+				So(directory.Rules[0].WildcardMatch, ShouldEqual, "*.sh")
+
+				So(directory.Rules[1].BackupType, ShouldEqual, string(entry.Instruction))
+				So(directory.Rules[1].WildcardMatch, ShouldEqual, "*.txt")
+			})
+		})
+
+		Convey("With two ignore patterns", func() {
+			entry.Ignore = "*.sh *.txt"
+
+			Convey("Convert will make three rules", func() {
+				directory, err := convertEntry(&entry)
+				So(err, ShouldBeNil)
+
+				So(directory.Rules, ShouldHaveLength, 3)
+
+				So(directory.Rules[0].BackupType, ShouldEqual, string(entry.Instruction))
+				So(directory.Rules[0].WildcardMatch, ShouldEqual, "*")
+
+				So(directory.Rules[1].BackupType, ShouldEqual, string(sources.NoBackup))
+				So(directory.Rules[1].WildcardMatch, ShouldEqual, "*.sh")
+
+				So(directory.Rules[2].BackupType, ShouldEqual, string(sources.NoBackup))
+				So(directory.Rules[2].WildcardMatch, ShouldEqual, "*.txt")
+			})
+		})
+	})
+}
+
 func TestConvertSchema(t *testing.T) {
 	Convey("Given some test data", t, func() {
 		entriesTable := "test_convert_entries"

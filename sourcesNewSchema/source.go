@@ -54,10 +54,6 @@ func (r *Rule) IsValid() error {
 		return fmt.Errorf("%w: BackupType", ErrMissingArgument)
 	}
 
-	if r.BackupFrequency == 0 {
-		return fmt.Errorf("%w: BackupFrequency", ErrMissingArgument)
-	}
-
 	if r.ReviewAt.IsZero() {
 		return fmt.Errorf("%w: ReviewAt", ErrMissingArgument)
 	}
@@ -74,7 +70,7 @@ func (r *Rule) IsValid() error {
 }
 
 func (r *Rule) SetDefaults() {
-	if r.BackupFrequency == 0 {
+	if r.BackupFrequency == 0 && r.BackupType != "nobackup" {
 		r.BackupFrequency = DefaultBackupFrequency
 	}
 

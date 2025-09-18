@@ -28,7 +28,7 @@ const createSQLiteRulesTableTmpl = `CREATE TABLE %s (
 	directoryID INTEGER NOT NULL,
 	backupType TEXT NOT NULL,
 	backupMetadata TEXT,
-	backupFrequency INTEGER NOT NULL,
+	backupFrequency INTEGER,
 	wildcardMatch TEXT NOT NULL,
 	reviewAt DATE NOT NULL,
 	deleteAt DATE NOT NULL,
