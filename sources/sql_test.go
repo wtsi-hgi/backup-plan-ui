@@ -91,7 +91,7 @@ func TestSQLSource_AddEntry(t *testing.T) {
 }
 
 func TestSQLiteSource_WriteEntries(t *testing.T) {
-	entries := createTestEntries(t)
+	entries := CreateTestEntries(t)
 
 	dbPath := filepath.Join(t.TempDir(), "test.db")
 
@@ -128,7 +128,7 @@ func TestMySQLSource_WriteEntries(t *testing.T) {
 	defer callAndLogTestError(t, sq.Close)
 	defer cleanupMySQL(t, sq)
 
-	entries := createTestEntries(t)
+	entries := CreateTestEntries(t)
 
 	err = sq.WriteEntries(entries)
 	if err != nil {
@@ -206,7 +206,7 @@ func setupSQLiteSourceForTest(t *testing.T) ([]*Entry, DataSource) {
 func createTestMySQLTable(t *testing.T) ([]*Entry, MySQLSource, string) {
 	t.Helper()
 
-	entries := createTestEntries(t)
+	entries := CreateTestEntries(t)
 	for _, entry := range entries {
 		entry.ID += 1
 	}

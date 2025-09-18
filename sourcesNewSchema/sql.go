@@ -20,6 +20,7 @@ const dropTableSQLTmpl = "DROP TABLE IF EXISTS %s"
 
 const insertDirectoryTmpl = "INSERT INTO %s (path, faculty, programme, claimedBy) VALUES (?, ?, ?, ?)"
 const selectDirectoryTmpl = "SELECT id, path, faculty, programme, claimedBy FROM %s WHERE id = ?"
+const selectDirectoryByPathTmpl = "SELECT id, path, faculty, programme, claimedBy FROM %s WHERE path = ?"
 const claimDirectoryTmpl = "UPDATE %s SET claimedBy = ? WHERE id = ?"
 const insertRuleTmpl = `INSERT INTO %s
 	(directoryID, backupType, backupMetadata, backupFrequency, reviewAt, deleteAt, wildcardMatch)
@@ -150,7 +151,7 @@ func (sq SQLSource) AddDirectory(directory Directory) (id uint, err error) {
 	}
 
 	for _, rule := range directory.Rules {
-		_, err = sq.setRule(tx, id, *rule)
+		_, err = sq.setRule(tx, id, rule)
 		if err != nil {
 			return 0, err
 		}
@@ -238,7 +239,25 @@ func (sq SQLSource) scanDirectory(row scanner) (*Directory, error) {
 	return &directory, nil
 }
 
-func (sq SQLSource) GetRules(id uint) ([]*Rule, error) {
+func (sq SQLSource) SearchDirectory(path string) (*Directory, error) {
+	stmt := fmt.Sprintf(selectDirectoryByPathTmpl, sq.directoriesTableName)
+
+	row := sq.db.QueryRow(stmt, path)
+
+	directory, err := sq.scanDirectory(row)
+	if err != nil {
+		return nil, err
+	}
+
+	directory.Rules, err = sq.GetRules(directory.ID)
+	if err != nil {
+		return nil, err
+	}
+
+	return directory, nil
+}
+
+func (sq SQLSource) GetRules(id uint) ([]Rule, error) {
 	stmt := fmt.Sprintf(selectRulesTmpl, sq.rulesTableName)
 
 	rows, err := sq.db.Query(stmt, id)
@@ -248,7 +267,7 @@ func (sq SQLSource) GetRules(id uint) ([]*Rule, error) {
 
 	defer callAndLogError(rows.Close)
 
-	var rules []*Rule //nolint:prealloc
+	var rules []Rule //nolint:prealloc
 
 	for rows.Next() {
 		rule, err := sq.scanRule(rows)
@@ -256,7 +275,7 @@ func (sq SQLSource) GetRules(id uint) ([]*Rule, error) {
 			return nil, err
 		}
 
-		rules = append(rules, rule)
+		rules = append(rules, *rule)
 	}
 
 	return rules, nil

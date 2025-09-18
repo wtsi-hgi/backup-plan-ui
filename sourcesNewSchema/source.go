@@ -17,6 +17,7 @@ type DataSource interface {
 
 	AddDirectory(directory Directory) (uint, error)
 	GetDirectory(id uint) (*Directory, error)
+	SearchDirectory(path string) (*Directory, error)
 	ClaimDirectory(id uint, user string) error
 	DeleteDirectory(id uint) error
 
@@ -31,7 +32,7 @@ type Directory struct {
 	Faculty   string
 	Programme string
 	ClaimedBy string
-	Rules     []*Rule
+	Rules     []Rule
 }
 
 type Rule struct {
@@ -45,7 +46,7 @@ type Rule struct {
 }
 
 func (d *Directory) AddRule(rule Rule) {
-	d.Rules = append(d.Rules, &rule)
+	d.Rules = append(d.Rules, rule)
 }
 
 func (r *Rule) IsValid() error {

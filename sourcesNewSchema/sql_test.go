@@ -126,6 +126,9 @@ func TestSQLSourceInterface(t *testing.T) {
 			Convey("You cannot get a non-existent directory", func() {
 				_, err := sq.GetDirectory(1)
 				So(err, ShouldEqual, ErrNoDirectory)
+
+				_, err = sq.SearchDirectory("/path")
+				So(err, ShouldEqual, ErrNoDirectory)
 			})
 
 			Convey("You cannot claim a non-existent directory", func() {
@@ -158,6 +161,10 @@ func TestSQLSourceInterface(t *testing.T) {
 					So(err, ShouldBeNil)
 
 					directory.ID = id
+					So(result, ShouldResemble, &directory)
+
+					result, err = sq.SearchDirectory(directory.Path)
+					So(err, ShouldBeNil)
 					So(result, ShouldResemble, &directory)
 				})
 
@@ -216,7 +223,7 @@ func TestSQLSourceInterface(t *testing.T) {
 						result, err := sq.GetDirectory(id)
 						So(err, ShouldBeNil)
 						So(result.Rules, ShouldHaveLength, 1)
-						So(result.Rules[0], ShouldResemble, &rule)
+						So(result.Rules[0], ShouldResemble, rule)
 
 						Convey("You can delete a rule for a directory", func() {
 							err = sq.DeleteRule(rule.ID)
@@ -278,7 +285,7 @@ func TestSQLSourceInterface(t *testing.T) {
 					result, err := sq.GetDirectory(id)
 					So(err, ShouldBeNil)
 					So(result.Rules, ShouldHaveLength, 1)
-					So(result.Rules[0], ShouldResemble, &rule)
+					So(result.Rules[0], ShouldResemble, rule)
 				})
 			})
 		})

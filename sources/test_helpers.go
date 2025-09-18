@@ -13,7 +13,7 @@ import (
 
 const NumTestDataRows = 4
 
-func createTestEntries(t *testing.T) []*Entry {
+func CreateTestEntries(t *testing.T) []*Entry {
 	t.Helper()
 
 	if NumTestDataRows < len(instructionLookup) {
@@ -57,7 +57,7 @@ func createTestEntries(t *testing.T) []*Entry {
 func CreateTestCSV(t *testing.T) ([]*Entry, string) {
 	t.Helper()
 
-	entries := createTestEntries(t)
+	entries := CreateTestEntries(t)
 
 	file, err := os.CreateTemp(t.TempDir(), "*.csv")
 	if err != nil {
@@ -84,7 +84,7 @@ func CreateTestCSV(t *testing.T) ([]*Entry, string) {
 func CreateTestSQLiteTable(t *testing.T) ([]*Entry, SQLiteSource) {
 	t.Helper()
 
-	entries := createTestEntries(t)
+	entries := CreateTestEntries(t)
 	for _, entry := range entries {
 		entry.ID++
 	}
