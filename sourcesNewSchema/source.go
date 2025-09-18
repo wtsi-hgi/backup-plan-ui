@@ -70,8 +70,10 @@ func (r *Rule) IsValid() error {
 }
 
 func (r *Rule) SetDefaults() {
-	if r.BackupFrequency == 0 && r.BackupType != "nobackup" {
-		r.BackupFrequency = DefaultBackupFrequency
+	if r.BackupFrequency == 0 {
+		if r.BackupType != "nobackup" && r.BackupType != "manual backup" {
+			r.BackupFrequency = DefaultBackupFrequency
+		}
 	}
 
 	now := time.Now().UTC()
