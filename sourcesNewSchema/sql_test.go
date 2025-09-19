@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"math/rand"
+	"os"
 	"path/filepath"
 	"testing"
 	"time"
@@ -51,16 +52,29 @@ func withZeroContext(f func(context.Context) error) func() error {
 	}
 }
 
+func makeMySQLConfigForTest() MySQLConfig {
+	return MySQLConfig{
+		Host:     os.Getenv("MYSQL_HOST"),
+		Port:     os.Getenv("MYSQL_PORT"),
+		User:     os.Getenv("MYSQL_USER"),
+		Password: os.Getenv("MYSQL_PASS"),
+		Database: os.Getenv("MYSQL_DATABASE"),
+	}
+}
+
 func TestNewMySQLSource(t *testing.T) {
 	Convey("You can create a MySQL source", t, func() {
 		directoriesTableName := "test_create_directories"
 		rulesTableName := "test_create_rules"
 
-		sq, err := NewMySQLSourceFromEnv(directoriesTableName, rulesTableName)
+		cfg := makeMySQLConfigForTest()
+
+		err := cfg.Validate()
 		if err != nil && errors.Is(err, ErrMissingArgument) {
 			t.Skip("Skipping MySQL test because MySQL host, port, user, pass, or database is not set.")
 		}
 
+		sq, err := NewMySQLSource(cfg, directoriesTableName, rulesTableName)
 		So(err, ShouldBeNil)
 
 		t.Cleanup(callAndLogCleanup(t, sq.Close))
@@ -75,7 +89,8 @@ func TestNewMySQLSource(t *testing.T) {
 	})
 }
 
-func setupMySQLSourceForTest(t *testing.T) SQLSourceInterface { //nolint:ireturn
+//nolint:ireturn
+func setupMySQLSourceForTest(t *testing.T) SQLSourceInterface {
 	t.Helper()
 
 	suffix := rand.Int() //nolint:gosec
@@ -83,12 +98,15 @@ func setupMySQLSourceForTest(t *testing.T) SQLSourceInterface { //nolint:ireturn
 	directoryTableName := fmt.Sprintf("test_directory_%d", suffix)
 	ruleTableName := fmt.Sprintf("test_rule_%d", suffix)
 
-	sq, err := NewMySQLSourceFromEnv(directoryTableName, ruleTableName)
-	if err != nil {
-		if errors.Is(err, ErrMissingArgument) {
-			t.Skip("Skipping MySQL test because MySQL host, port, user, pass, or database is not set.")
-		}
+	cfg := makeMySQLConfigForTest()
 
+	err := cfg.Validate()
+	if err != nil && errors.Is(err, ErrMissingArgument) {
+		t.Skip("Skipping MySQL test because MySQL host, port, user, pass, or database is not set.")
+	}
+
+	sq, err := NewMySQLSource(cfg, directoryTableName, ruleTableName)
+	if err != nil {
 		t.Fatal(err)
 	}
 

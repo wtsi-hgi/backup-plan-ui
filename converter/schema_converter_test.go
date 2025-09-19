@@ -3,8 +3,8 @@ package converter
 //nolint:gci
 import (
 	"context"
-	"errors"
 	"fmt"
+	"os"
 	"testing"
 
 	. "github.com/smartystreets/goconvey/convey"
@@ -79,16 +79,39 @@ func TestConvertEntry(t *testing.T) {
 	})
 }
 
+func makeTargetMySQLConfigForTest() sourcesnewschema.MySQLConfig {
+	return sourcesnewschema.MySQLConfig{
+		Host:     os.Getenv("MYSQL_HOST"),
+		Port:     os.Getenv("MYSQL_PORT"),
+		User:     os.Getenv("MYSQL_USER"),
+		Password: os.Getenv("MYSQL_PASS"),
+		Database: os.Getenv("MYSQL_DATABASE"),
+	}
+}
+
+func makeSourceMySQLConfigForTest() sources.MySQLConfig {
+	return sources.MySQLConfig{
+		Host:     os.Getenv("SOURCE_MYSQL_HOST"),
+		Port:     os.Getenv("SOURCE_MYSQL_PORT"),
+		User:     os.Getenv("SOURCE_MYSQL_USER"),
+		Password: os.Getenv("SOURCE_MYSQL_PASS"),
+		Database: os.Getenv("SOURCE_MYSQL_DATABASE"),
+	}
+}
+
 func TestConvertSchema(t *testing.T) {
 	Convey("Given some test data", t, func() {
 		entriesTable := "test_convert_entries"
 		ctx := context.Background()
 
-		db, err := sources.NewMySQLSourceFromEnv(entriesTable)
-		if err != nil && errors.Is(err, sources.ErrMissingArgument) {
+		cfgSource := makeSourceMySQLConfigForTest()
+
+		err := cfgSource.Validate()
+		if err != nil {
 			t.Skip("Skipping MySQL test because MySQL host, port, user, pass, or database is not set.")
 		}
 
+		db, err := sources.NewMySQLSource(cfgSource, entriesTable)
 		So(err, ShouldBeNil)
 
 		t.Cleanup(callAndLogCleanup(t, db.Close))
@@ -110,10 +133,17 @@ func TestConvertSchema(t *testing.T) {
 			dirsTable := "test_convert_dirs"
 			rulesTable := "test_convert_rules"
 
-			err = ConvertSchema(entriesTable, dirsTable, rulesTable, false)
+			cfgTarget := makeTargetMySQLConfigForTest()
+
+			err = cfgTarget.Validate()
+			if err != nil {
+				t.Skip("Skipping MySQL test because MySQL host, port, user, pass, or database is not set.")
+			}
+
+			err = ConvertSchema(cfgSource, entriesTable, cfgTarget, dirsTable, rulesTable, false)
 			So(err, ShouldBeNil)
 
-			newDB, err := sourcesnewschema.NewMySQLSourceFromEnv(dirsTable, rulesTable)
+			newDB, err := sourcesnewschema.NewMySQLSource(cfgTarget, dirsTable, rulesTable)
 			So(err, ShouldBeNil)
 
 			t.Cleanup(callAndLogCleanup(t, newDB.Close))

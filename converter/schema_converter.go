@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
-	"os"
 	"strings"
 
 	"github.com/wtsi-hgi/backup-plan-ui/sources"
@@ -14,22 +13,16 @@ import (
 
 var ErrInvalidInstruction = errors.New("invalid instruction")
 
-func ConvertSchema(sourceTableName, dirsTableName, rulesTableName string, dropTable bool) error {
-	oldDB, err := sources.NewMySQLSource(
-		os.Getenv("SOURCE_MYSQL_HOST"),
-		os.Getenv("SOURCE_MYSQL_PORT"),
-		os.Getenv("SOURCE_MYSQL_USER"),
-		os.Getenv("SOURCE_MYSQL_PASS"),
-		os.Getenv("SOURCE_MYSQL_DATABASE"),
-		sourceTableName,
-	)
+func ConvertSchema(cfgSource sources.MySQLConfig, sourceTableName string,
+	cfgTarget sourcesnewschema.MySQLConfig, dirsTableName, rulesTableName string, dropTable bool) error {
+	oldDB, err := sources.NewMySQLSource(cfgSource, sourceTableName)
 	if err != nil {
 		return err
 	}
 
 	defer callAndLogError(oldDB.Close)
 
-	newDB, err := sourcesnewschema.NewMySQLSourceFromEnv(dirsTableName, rulesTableName)
+	newDB, err := sourcesnewschema.NewMySQLSource(cfgTarget, dirsTableName, rulesTableName)
 	if err != nil {
 		return err
 	}
@@ -134,7 +127,7 @@ func convertInstruction(instruction sources.Instruction) (sourcesnewschema.Instr
 }
 
 func addRulesByPattern(directory *sourcesnewschema.Directory, baseRule sourcesnewschema.Rule, patterns string) {
-	for _, pattern := range strings.Split(patterns, " ") {
+	for pattern := range strings.SplitSeq(patterns, " ") {
 		baseRule.WildcardMatch = pattern
 
 		directory.AddRule(baseRule)

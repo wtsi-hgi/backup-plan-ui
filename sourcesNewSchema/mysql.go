@@ -5,7 +5,6 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"os"
 	"slices"
 )
 
@@ -43,41 +42,50 @@ const mySQLDuplicateEntryError = "Duplicate entry"
 
 var ErrMissingArgument = errors.New("missing required argument")
 
-type MySQLSource struct {
-	*SQLSource
+type MySQLConfig struct {
+	Host     string
+	Port     string
+	User     string
+	Password string
+	Database string
 }
 
-func NewMySQLSourceFromEnv(directoriesTableName, rulesTableName string,
-) (*MySQLSource, error) {
-	return NewMySQLSource(
-		os.Getenv("MYSQL_HOST"),
-		os.Getenv("MYSQL_PORT"),
-		os.Getenv("MYSQL_USER"),
-		os.Getenv("MYSQL_PASS"),
-		os.Getenv("MYSQL_DATABASE"),
-		directoriesTableName,
-		rulesTableName,
-	)
+func (cfg MySQLConfig) Validate() error {
+	var missing []string
+
+	appendIfEmpty(&missing, "host", cfg.Host)
+	appendIfEmpty(&missing, "port", cfg.Port)
+	appendIfEmpty(&missing, "user", cfg.User)
+	appendIfEmpty(&missing, "password", cfg.Password)
+	appendIfEmpty(&missing, "dbName", cfg.Database)
+
+	if len(missing) > 0 {
+		return fmt.Errorf("%w: %v", ErrMissingArgument, missing)
+	}
+
+	return nil
+}
+
+func appendIfEmpty(array *[]string, name, val string) {
+	if val == "" {
+		*array = append(*array, name)
+	}
+}
+
+type MySQLSource struct {
+	*SQLSource
 }
 
 // NewMySQLSource opens a connection to a MySQL database using given credentials and stores it internally.
 // It also creates a table with the given name if it does not exist.
 // You are responsible to close the connection using Close().
-func NewMySQLSource(host, port, user, password, dbName, directoriesTableName,
-	rulesTableName string) (*MySQLSource, error) {
-	var missing []string
-
-	appendIfEmpty(&missing, "host", host)
-	appendIfEmpty(&missing, "port", port)
-	appendIfEmpty(&missing, "user", user)
-	appendIfEmpty(&missing, "password", password)
-	appendIfEmpty(&missing, "dbName", dbName)
-
-	if len(missing) > 0 {
-		return nil, fmt.Errorf("%w: %v", ErrMissingArgument, missing)
+func NewMySQLSource(cfg MySQLConfig, directoriesTableName, rulesTableName string) (*MySQLSource, error) {
+	err := cfg.Validate()
+	if err != nil {
+		return nil, err
 	}
 
-	address := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?parseTime=true", user, password, host, port, dbName)
+	address := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?parseTime=true", cfg.User, cfg.Password, cfg.Host, cfg.Port, cfg.Database)
 
 	db, err := sql.Open("mysql", address)
 	if err != nil {
@@ -93,13 +101,12 @@ func NewMySQLSource(host, port, user, password, dbName, directoriesTableName,
 		},
 	}
 
-	return sq, sq.Init(context.Background())
-}
-
-func appendIfEmpty(array *[]string, name, val string) {
-	if val == "" {
-		*array = append(*array, name)
+	err = sq.Init(context.Background())
+	if err != nil {
+		return nil, err
 	}
+
+	return sq, nil
 }
 
 func (sq MySQLSource) ShowTables(ctx context.Context) ([]string, error) {

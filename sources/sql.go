@@ -84,41 +84,65 @@ func NewSQLiteSource(path string) (SQLiteSource, error) {
 }
 
 func NewMySQLSourceFromEnv(tableName string) (MySQLSource, error) {
-	return NewMySQLSource(
-		os.Getenv("MYSQL_HOST"),
-		os.Getenv("MYSQL_PORT"),
-		os.Getenv("MYSQL_USER"),
-		os.Getenv("MYSQL_PASS"),
-		os.Getenv("MYSQL_DATABASE"),
-		tableName,
-	)
+	cfg := MySQLConfig{
+		Host:     os.Getenv("MYSQL_HOST"),
+		Port:     os.Getenv("MYSQL_PORT"),
+		User:     os.Getenv("MYSQL_USER"),
+		Password: os.Getenv("MYSQL_PASS"),
+		Database: os.Getenv("MYSQL_DATABASE"),
+	}
+
+	return NewMySQLSource(cfg, tableName)
+}
+
+type MySQLConfig struct {
+	Host     string
+	Port     string
+	User     string
+	Password string
+	Database string
+}
+
+func (cfg MySQLConfig) Validate() error {
+	var missing []string
+
+	if cfg.Host == "" {
+		missing = append(missing, "host")
+	}
+
+	if cfg.Port == "" {
+		missing = append(missing, "port")
+	}
+
+	if cfg.User == "" {
+		missing = append(missing, "user")
+	}
+
+	if cfg.Password == "" {
+		missing = append(missing, "password")
+	}
+
+	if cfg.Database == "" {
+		missing = append(missing, "dbName")
+	}
+
+	if len(missing) > 0 {
+		return fmt.Errorf("%w: %v", ErrMissingArgument, missing)
+	}
+
+	return nil
 }
 
 // NewMySQLSource opens a connection to a MySQL database using given credentials and stores it internally.
 // It also creates a table with the given name if it does not exist.
 // You are responsible to close the connection using Close().
-func NewMySQLSource(host, port, user, password, dbName, tableName string) (MySQLSource, error) {
-	var missing []string
-	if host == "" {
-		missing = append(missing, "host")
-	}
-	if port == "" {
-		missing = append(missing, "port")
-	}
-	if user == "" {
-		missing = append(missing, "user")
-	}
-	if password == "" {
-		missing = append(missing, "password")
-	}
-	if dbName == "" {
-		missing = append(missing, "dbName")
-	}
-	if len(missing) > 0 {
-		return MySQLSource{}, fmt.Errorf("%w: %v\n", ErrMissingArgument, missing)
+func NewMySQLSource(cfg MySQLConfig, tableName string) (MySQLSource, error) {
+	err := cfg.Validate()
+	if err != nil {
+		return MySQLSource{}, err
 	}
 
-	address := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s", user, password, host, port, dbName)
+	address := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s", cfg.User, cfg.Password, cfg.Host, cfg.Port, cfg.Database)
 
 	db, err := sql.Open("mysql", address)
 	if err != nil {

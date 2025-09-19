@@ -29,7 +29,10 @@ func usage() {
 	vars := "SOURCE_MYSQL_HOST, SOURCE_MYSQL_PORT, SOURCE_MYSQL_USER, SOURCE_MYSQL_PASS, SOURCE_MYSQL_DATABASE"
 
 	fmt.Println("\nEnvironment (source mysql): " + vars)
-	fmt.Println("Environment (target mysql): MYSQL_HOST, MYSQL_PORT, MYSQL_USER, MYSQL_PASS, MYSQL_DATABASE")
+
+	vars = "TARGET_MYSQL_HOST, TARGET_MYSQL_PORT, TARGET_MYSQL_USER, TARGET_MYSQL_PASS, TARGET_MYSQL_DATABASE"
+
+	fmt.Println("Environment (target mysql): " + vars)
 	fmt.Println("\nFlags:")
 	flag.PrintDefaults()
 }
@@ -48,7 +51,23 @@ func init() {
 func main() {
 	flag.Parse()
 
-	err := converter.ConvertSchema(sourceTableName, dirsTableName, rulesTableName, dropTable)
+	cfgSource := sources.MySQLConfig{
+		Host:     os.Getenv("SOURCE_MYSQL_HOST"),
+		Port:     os.Getenv("SOURCE_MYSQL_PORT"),
+		User:     os.Getenv("SOURCE_MYSQL_USER"),
+		Password: os.Getenv("SOURCE_MYSQL_PASS"),
+		Database: os.Getenv("SOURCE_MYSQL_DATABASE"),
+	}
+
+	cfgTarget := sourcesnewschema.MySQLConfig{
+		Host:     os.Getenv("TARGET_MYSQL_HOST"),
+		Port:     os.Getenv("TARGET_MYSQL_PORT"),
+		User:     os.Getenv("TARGET_MYSQL_USER"),
+		Password: os.Getenv("TARGET_MYSQL_PASS"),
+		Database: os.Getenv("TARGET_MYSQL_DATABASE"),
+	}
+
+	err := converter.ConvertSchema(cfgSource, sourceTableName, cfgTarget, dirsTableName, rulesTableName, dropTable)
 	if err != nil {
 		log.Fatalf("Conversion failed: %v", err)
 	}
