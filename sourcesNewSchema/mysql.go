@@ -1,6 +1,7 @@
-package sourcesNewSchema
+package sourcesnewschema
 
 import (
+	"context"
 	"database/sql"
 	"errors"
 	"fmt"
@@ -73,7 +74,7 @@ func NewMySQLSource(host, port, user, password, dbName, directoriesTableName,
 	appendIfEmpty(&missing, "dbName", dbName)
 
 	if len(missing) > 0 {
-		return nil, fmt.Errorf("%w: %v\n", ErrMissingArgument, missing)
+		return nil, fmt.Errorf("%w: %v", ErrMissingArgument, missing)
 	}
 
 	address := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?parseTime=true", user, password, host, port, dbName)
@@ -92,7 +93,7 @@ func NewMySQLSource(host, port, user, password, dbName, directoriesTableName,
 		},
 	}
 
-	return sq, sq.Init()
+	return sq, sq.Init(context.Background())
 }
 
 func appendIfEmpty(array *[]string, name, val string) {
@@ -101,12 +102,12 @@ func appendIfEmpty(array *[]string, name, val string) {
 	}
 }
 
-func (sq MySQLSource) ShowTables() ([]string, error) {
-	return sq.showTables(mySQLShowTablesStmt)
+func (sq MySQLSource) ShowTables(ctx context.Context) ([]string, error) {
+	return sq.showTables(ctx, mySQLShowTablesStmt)
 }
 
-func (sq MySQLSource) Init() error {
-	tables, err := sq.ShowTables()
+func (sq MySQLSource) Init(ctx context.Context) error {
+	tables, err := sq.ShowTables(ctx)
 	if err != nil {
 		return err
 	}
@@ -127,6 +128,7 @@ func (sq MySQLSource) Init() error {
 	}
 
 	return sq.init(
+		ctx,
 		createMySQLDirectoriesTableTmpl,
 		createMySQLRulesTableTmpl,
 	)

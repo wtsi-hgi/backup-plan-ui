@@ -1,13 +1,16 @@
 package converter
 
+//nolint:gci
 import (
+	"context"
 	"errors"
 	"fmt"
 	"testing"
 
 	. "github.com/smartystreets/goconvey/convey"
+
 	"github.com/wtsi-hgi/backup-plan-ui/sources"
-	"github.com/wtsi-hgi/backup-plan-ui/sourcesNewSchema"
+	"github.com/wtsi-hgi/backup-plan-ui/sourcesNewSchema" //nolint:goimports
 )
 
 func TestConvertEntry(t *testing.T) {
@@ -79,6 +82,8 @@ func TestConvertEntry(t *testing.T) {
 func TestConvertSchema(t *testing.T) {
 	Convey("Given some test data", t, func() {
 		entriesTable := "test_convert_entries"
+		ctx := context.Background()
+
 		db, err := sources.NewMySQLSourceFromEnv(entriesTable)
 		if err != nil && errors.Is(err, sources.ErrMissingArgument) {
 			t.Skip("Skipping MySQL test because MySQL host, port, user, pass, or database is not set.")
@@ -108,15 +113,15 @@ func TestConvertSchema(t *testing.T) {
 			err = ConvertSchema(entriesTable, dirsTable, rulesTable, false)
 			So(err, ShouldBeNil)
 
-			newDB, err := sourcesNewSchema.NewMySQLSourceFromEnv(dirsTable, rulesTable)
+			newDB, err := sourcesnewschema.NewMySQLSourceFromEnv(dirsTable, rulesTable)
 			So(err, ShouldBeNil)
 
 			t.Cleanup(callAndLogCleanup(t, newDB.Close))
-			t.Cleanup(callAndLogCleanup(t, newDB.DropTables))
+			t.Cleanup(callAndLogCleanup(t, withZeroContext(newDB.DropTables)))
 
 			for _, entry := range testEntries {
 				Convey(fmt.Sprintf("%s - %s", entry.Directory, entry.Instruction), func() {
-					directory, err := newDB.SearchDirectory(entry.Directory)
+					directory, err := newDB.SearchDirectory(ctx, entry.Directory)
 					So(err, ShouldBeNil)
 
 					compareEntryAndDirectory(t, entry, directory)
@@ -137,7 +142,13 @@ func callAndLogCleanup(t *testing.T, f func() error) func() {
 	}
 }
 
-func compareEntryAndDirectory(t *testing.T, entry *sources.Entry, directory *sourcesNewSchema.Directory) {
+func withZeroContext(f func(context.Context) error) func() error {
+	return func() error {
+		return f(context.Background())
+	}
+}
+
+func compareEntryAndDirectory(t *testing.T, entry *sources.Entry, directory *sourcesnewschema.Directory) {
 	t.Helper()
 
 	So(entry.Directory, ShouldEqual, directory.Path)
@@ -147,7 +158,7 @@ func compareEntryAndDirectory(t *testing.T, entry *sources.Entry, directory *sou
 	So(isInstructionInRules(entry.Instruction, entry.Match, entry.Ignore, directory.Rules), ShouldBeTrue)
 }
 
-func isInstructionInRules(instruction sources.Instruction, match string, ignore string, rules []sourcesNewSchema.Rule,
+func isInstructionInRules(instruction sources.Instruction, match string, ignore string, rules []sourcesnewschema.Rule,
 ) bool {
 	matchPresent := false
 	ignorePresent := true
@@ -167,7 +178,7 @@ func isInstructionInRules(instruction sources.Instruction, match string, ignore 
 	return matchPresent && ignorePresent
 }
 
-func ruleResemblesInstruction(instruction sources.Instruction, match string, rule sourcesNewSchema.Rule) bool {
+func ruleResemblesInstruction(instruction sources.Instruction, match string, rule sourcesnewschema.Rule) bool {
 	if string(rule.BackupType) != string(instruction) {
 		return false
 	}

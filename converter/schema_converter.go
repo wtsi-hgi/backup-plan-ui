@@ -1,6 +1,7 @@
 package converter
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -8,7 +9,7 @@ import (
 	"strings"
 
 	"github.com/wtsi-hgi/backup-plan-ui/sources"
-	"github.com/wtsi-hgi/backup-plan-ui/sourcesNewSchema"
+	"github.com/wtsi-hgi/backup-plan-ui/sourcesNewSchema" //nolint:goimports
 )
 
 var ErrInvalidInstruction = errors.New("invalid instruction")
@@ -28,7 +29,7 @@ func ConvertSchema(sourceTableName, dirsTableName, rulesTableName string, dropTa
 
 	defer callAndLogError(oldDB.Close)
 
-	newDB, err := sourcesNewSchema.NewMySQLSourceFromEnv(dirsTableName, rulesTableName)
+	newDB, err := sourcesnewschema.NewMySQLSourceFromEnv(dirsTableName, rulesTableName)
 	if err != nil {
 		return err
 	}
@@ -52,16 +53,18 @@ func callAndLogError(f func() error) {
 	}
 }
 
-func resetDB(db *sourcesNewSchema.MySQLSource) error {
-	err := db.DropTables()
+func resetDB(db *sourcesnewschema.MySQLSource) error {
+	ctx := context.TODO()
+
+	err := db.DropTables(ctx)
 	if err != nil {
 		return err
 	}
 
-	return db.Init()
+	return db.Init(ctx)
 }
 
-func convertDBSchema(oldDB sources.MySQLSource, newDB *sourcesNewSchema.MySQLSource) error {
+func convertDBSchema(oldDB sources.MySQLSource, newDB *sourcesnewschema.MySQLSource) error {
 	entries, err := oldDB.ReadAll()
 	if err != nil {
 		return err
@@ -82,8 +85,8 @@ func convertDBSchema(oldDB sources.MySQLSource, newDB *sourcesNewSchema.MySQLSou
 	return nil
 }
 
-func convertEntry(entry *sources.Entry) (sourcesNewSchema.Directory, error) {
-	directory := sourcesNewSchema.Directory{
+func convertEntry(entry *sources.Entry) (sourcesnewschema.Directory, error) {
+	directory := sourcesnewschema.Directory{
 		Path:      entry.Directory,
 		Faculty:   entry.Faculty,
 		Programme: "unknown",
@@ -95,7 +98,7 @@ func convertEntry(entry *sources.Entry) (sourcesNewSchema.Directory, error) {
 		return directory, err
 	}
 
-	baseRule := sourcesNewSchema.Rule{
+	baseRule := sourcesnewschema.Rule{
 		BackupType:     backupType,
 		BackupMetadata: entry.Metadata,
 		WildcardMatch:  entry.Match,
@@ -106,7 +109,7 @@ func convertEntry(entry *sources.Entry) (sourcesNewSchema.Directory, error) {
 	addRulesByPattern(&directory, baseRule, baseRule.WildcardMatch)
 
 	if entry.Ignore != "" {
-		baseRule.BackupType = sourcesNewSchema.NoBackup
+		baseRule.BackupType = sourcesnewschema.NoBackup
 		baseRule.BackupFrequency = 0
 
 		addRulesByPattern(&directory, baseRule, entry.Ignore)
@@ -115,22 +118,22 @@ func convertEntry(entry *sources.Entry) (sourcesNewSchema.Directory, error) {
 	return directory, nil
 }
 
-func convertInstruction(instruction sources.Instruction) (sourcesNewSchema.Instruction, error) {
+func convertInstruction(instruction sources.Instruction) (sourcesnewschema.Instruction, error) {
 	switch instruction {
 	case sources.Backup:
-		return sourcesNewSchema.Backup, nil
+		return sourcesnewschema.Backup, nil
 	case sources.NoBackup:
-		return sourcesNewSchema.NoBackup, nil
+		return sourcesnewschema.NoBackup, nil
 	case sources.TempBackup:
-		return sourcesNewSchema.TempBackup, nil
+		return sourcesnewschema.TempBackup, nil
 	case sources.ManualBackup:
-		return sourcesNewSchema.ManualBackup, nil
+		return sourcesnewschema.ManualBackup, nil
 	default:
 		return "", fmt.Errorf("%w: %s", ErrInvalidInstruction, instruction)
 	}
 }
 
-func addRulesByPattern(directory *sourcesNewSchema.Directory, baseRule sourcesNewSchema.Rule, patterns string) {
+func addRulesByPattern(directory *sourcesnewschema.Directory, baseRule sourcesnewschema.Rule, patterns string) {
 	for _, pattern := range strings.Split(patterns, " ") {
 		baseRule.WildcardMatch = pattern
 
@@ -138,30 +141,36 @@ func addRulesByPattern(directory *sourcesNewSchema.Directory, baseRule sourcesNe
 	}
 }
 
-func addOrUpdateDirectory(directory sourcesNewSchema.Directory, db *sourcesNewSchema.MySQLSource) error {
-	_, err := db.AddDirectory(directory)
+func addOrUpdateDirectory(directory sourcesnewschema.Directory, db *sourcesnewschema.MySQLSource) error {
+	ctx := context.TODO()
+
+	_, err := db.AddDirectory(ctx, directory)
 	if err == nil {
 		return nil
 	}
 
-	if !errors.Is(err, sourcesNewSchema.ErrDirectoryDuplicate) {
+	if !errors.Is(err, sourcesnewschema.ErrDirectoryDuplicate) {
 		return err
 	}
 
-	existingDir, err := db.SearchDirectory(directory.Path)
+	return updateDirectory(ctx, db, directory)
+}
+
+func updateDirectory(ctx context.Context, db *sourcesnewschema.MySQLSource, dir sourcesnewschema.Directory) error {
+	existingDir, err := db.SearchDirectory(ctx, dir.Path)
 	if err != nil {
 		return err
 	}
 
-	if existingDir.ClaimedBy != directory.ClaimedBy {
+	if existingDir.ClaimedBy != dir.ClaimedBy {
 		slog.Warn(fmt.Sprintf(
 			"Directory %s was already claimed by %s, %s will lose ownership",
-			directory.Path, existingDir.ClaimedBy, directory.ClaimedBy,
+			dir.Path, existingDir.ClaimedBy, dir.ClaimedBy,
 		))
 	}
 
-	for _, rule := range directory.Rules {
-		_, err = db.SetRule(existingDir.ID, rule)
+	for _, rule := range dir.Rules {
+		_, err = db.SetRule(ctx, existingDir.ID, rule)
 		if err != nil {
 			return err
 		}

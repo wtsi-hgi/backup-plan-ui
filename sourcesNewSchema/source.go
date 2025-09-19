@@ -1,6 +1,7 @@
-package sourcesNewSchema
+package sourcesnewschema
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"strings"
@@ -14,18 +15,18 @@ const (
 )
 
 type DataSource interface {
-	Init() error
+	Init(ctx context.Context) error
 	Close() error
 
-	AddDirectory(directory Directory) (uint, error)
-	GetDirectory(id uint) (*Directory, error)
-	SearchDirectory(path string) (*Directory, error)
-	ClaimDirectory(id uint, user string) error
-	DeleteDirectory(id uint) error
+	AddDirectory(ctx context.Context, directory Directory) (int64, error)
+	GetDirectory(ctx context.Context, id int64) (*Directory, error)
+	SearchDirectory(ctx context.Context, path string) (*Directory, error)
+	ClaimDirectory(ctx context.Context, id int64, user string) error
+	DeleteDirectory(ctx context.Context, id int64) error
 
-	SetRule(id uint, rule Rule) (uint, error)
-	UpdateRule(id uint, rule Rule) error
-	DeleteRule(id uint) error
+	SetRule(ctx context.Context, id int64, rule Rule) (int64, error)
+	UpdateRule(ctx context.Context, id int64, rule Rule) error
+	DeleteRule(ctx context.Context, id int64) error
 }
 
 type Instruction string
@@ -37,7 +38,7 @@ const (
 	ManualBackup Instruction = "manual backup"
 )
 
-var instructionLookup = map[string]Instruction{
+var instructionLookup = map[string]Instruction{ //nolint:gochecknoglobals
 	string(Backup):       Backup,
 	string(NoBackup):     NoBackup,
 	string(TempBackup):   TempBackup,
@@ -57,7 +58,7 @@ func ParseInstruction(s string) (Instruction, error) {
 }
 
 type Directory struct {
-	ID        uint
+	ID        int64
 	Path      string
 	Faculty   string
 	Programme string
@@ -66,7 +67,7 @@ type Directory struct {
 }
 
 type Rule struct {
-	ID              uint
+	ID              int64
 	BackupType      Instruction
 	BackupMetadata  string
 	BackupFrequency int

@@ -21,23 +21,24 @@ func CreateTestEntries(t *testing.T) []*Entry {
 			NumTestDataRows, len(instructionLookup))
 	}
 
+	return generateTestEntries(NumTestDataRows)
+}
+
+func generateTestEntries(n int) []*Entry {
 	instructions := make([]Instruction, 0, len(instructionLookup))
 	for _, v := range instructionLookup {
 		instructions = append(instructions, v)
 	}
 
 	baseEntry := Entry{
-		ReportingName: "",
 		ReportingRoot: "/some/path/to/project/dir",
 		Directory:     "/some/path/to/project/dir/input",
-		Instruction:   instructions[0],
-		Metadata:      "",
 		Requestor:     "user",
 		Faculty:       "group",
 	}
 
-	entries := make([]*Entry, NumTestDataRows)
-	for i := range NumTestDataRows {
+	entries := make([]*Entry, n)
+	for i := range n {
 		newEntry := baseEntry
 
 		newEntry.ID = uint16(i)

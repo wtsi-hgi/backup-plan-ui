@@ -1,7 +1,6 @@
-package sourcesNewSchema
+package sourcesnewschema
 
 import (
-	"fmt"
 	"testing"
 	"time"
 
@@ -18,6 +17,8 @@ func TestRule(t *testing.T) {
 			name:  "set default wildcard",
 			setup: func(r Rule) Rule { return r },
 			check: func(t *testing.T, r Rule) {
+				t.Helper()
+
 				So(r.WildcardMatch, ShouldEqual, "*")
 			},
 		},
@@ -25,6 +26,8 @@ func TestRule(t *testing.T) {
 			name:  "set default review date",
 			setup: func(r Rule) Rule { return r },
 			check: func(t *testing.T, r Rule) {
+				t.Helper()
+
 				expected := time.Now().UTC().AddDate(0, DefaultReviewMonth, 0)
 				So(r.ReviewAt, ShouldHappenWithin, time.Second, expected)
 			},
@@ -33,6 +36,8 @@ func TestRule(t *testing.T) {
 			name:  "set default delete date",
 			setup: func(r Rule) Rule { return r },
 			check: func(t *testing.T, r Rule) {
+				t.Helper()
+
 				expected := time.Now().UTC().AddDate(0, DefaultDeleteMonth, 0)
 				So(r.DeleteAt, ShouldHappenWithin, time.Second, expected)
 			},
@@ -41,6 +46,8 @@ func TestRule(t *testing.T) {
 			name:  "set default BackupFrequency",
 			setup: func(r Rule) Rule { return r },
 			check: func(t *testing.T, r Rule) {
+				t.Helper()
+
 				So(r.BackupFrequency, ShouldEqual, DefaultBackupFrequency)
 			},
 		},
@@ -52,6 +59,8 @@ func TestRule(t *testing.T) {
 				return r
 			},
 			check: func(t *testing.T, r Rule) {
+				t.Helper()
+
 				So(r.BackupFrequency, ShouldEqual, 0)
 			},
 		},
@@ -63,6 +72,8 @@ func TestRule(t *testing.T) {
 				return r
 			},
 			check: func(t *testing.T, r Rule) {
+				t.Helper()
+
 				So(r.BackupFrequency, ShouldEqual, 0)
 			},
 		},
@@ -84,7 +95,7 @@ func TestRule(t *testing.T) {
 func TestParseInstruction(t *testing.T) {
 	Convey("You can parse", t, func() {
 		for k, v := range instructionLookup {
-			Convey(fmt.Sprintf("%s instruction", k), func() {
+			Convey(k+" instruction", func() {
 				term, err := ParseInstruction(k)
 				So(err, ShouldBeNil)
 				So(term, ShouldEqual, v)

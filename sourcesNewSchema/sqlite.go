@@ -1,6 +1,7 @@
-package sourcesNewSchema
+package sourcesnewschema
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 )
@@ -63,15 +64,16 @@ func NewSQLiteSource(path string) (*SQLiteSource, error) {
 		},
 	}
 
-	return sq, sq.Init()
+	return sq, sq.Init(context.Background())
 }
 
-func (sq SQLiteSource) ShowTables() ([]string, error) {
-	return sq.showTables(sqliteShowTablesStmt)
+func (sq SQLiteSource) ShowTables(ctx context.Context) ([]string, error) {
+	return sq.showTables(ctx, sqliteShowTablesStmt)
 }
 
-func (sq SQLiteSource) Init() error {
+func (sq SQLiteSource) Init(ctx context.Context) error {
 	err := sq.init(
+		ctx,
 		createSQLiteDirectoriesTableTmpl,
 		createSQLiteRulesTableTmpl,
 	)
@@ -80,7 +82,9 @@ func (sq SQLiteSource) Init() error {
 	}
 
 	for _, tableName := range []string{sq.directoriesTableName, sq.rulesTableName} {
-		_, err = sq.db.Exec(fmt.Sprintf(createSQLiteTriggerTmpl, tableName))
+		stmt := fmt.Sprintf(createSQLiteTriggerTmpl, tableName)
+
+		_, err = sq.db.ExecContext(ctx, stmt)
 		if err != nil {
 			return err
 		}

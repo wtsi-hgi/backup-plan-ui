@@ -1,6 +1,7 @@
-package sourcesNewSchema
+package sourcesnewschema
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"math/rand"
@@ -8,16 +9,10 @@ import (
 	"testing"
 	"time"
 
+	_ "github.com/go-sql-driver/mysql"
+	_ "github.com/mattn/go-sqlite3"
 	. "github.com/smartystreets/goconvey/convey"
 )
-
-var sqlTestCases = []struct {
-	name  string
-	setup func(t *testing.T) SQLSourceInterface
-}{
-	{"SQLite", setupSQLiteSourceForTest},
-	{"MySQL", setupMySQLSourceForTest},
-}
 
 func TestNewSQLiteSource(t *testing.T) {
 	Convey("Given a database file", t, func() {
@@ -29,7 +24,7 @@ func TestNewSQLiteSource(t *testing.T) {
 
 			t.Cleanup(callAndLogCleanup(t, sq.Close))
 
-			tableNames, err := sq.ShowTables()
+			tableNames, err := sq.ShowTables(context.Background())
 			So(err, ShouldBeNil)
 
 			for _, tableName := range DefaultTables {
@@ -50,6 +45,12 @@ func callAndLogCleanup(t *testing.T, f func() error) func() {
 	}
 }
 
+func withZeroContext(f func(context.Context) error) func() error {
+	return func() error {
+		return f(context.Background())
+	}
+}
+
 func TestNewMySQLSource(t *testing.T) {
 	Convey("You can create a MySQL source", t, func() {
 		directoriesTableName := "test_create_directories"
@@ -63,9 +64,9 @@ func TestNewMySQLSource(t *testing.T) {
 		So(err, ShouldBeNil)
 
 		t.Cleanup(callAndLogCleanup(t, sq.Close))
-		t.Cleanup(callAndLogCleanup(t, sq.DropTables))
+		t.Cleanup(callAndLogCleanup(t, withZeroContext(sq.DropTables)))
 
-		tableNames, err := sq.ShowTables()
+		tableNames, err := sq.ShowTables(context.Background())
 		So(err, ShouldBeNil)
 
 		for _, tableName := range []string{directoriesTableName, rulesTableName} {
@@ -74,10 +75,10 @@ func TestNewMySQLSource(t *testing.T) {
 	})
 }
 
-func setupMySQLSourceForTest(t *testing.T) SQLSourceInterface {
+func setupMySQLSourceForTest(t *testing.T) SQLSourceInterface { //nolint:ireturn
 	t.Helper()
 
-	suffix := rand.Int()
+	suffix := rand.Int() //nolint:gosec
 
 	directoryTableName := fmt.Sprintf("test_directory_%d", suffix)
 	ruleTableName := fmt.Sprintf("test_rule_%d", suffix)
@@ -92,11 +93,12 @@ func setupMySQLSourceForTest(t *testing.T) SQLSourceInterface {
 	}
 
 	t.Cleanup(callAndLogCleanup(t, sq.Close))
-	t.Cleanup(callAndLogCleanup(t, sq.DropTables))
+	t.Cleanup(callAndLogCleanup(t, withZeroContext(sq.DropTables)))
 
 	return sq
 }
 
+//nolint:ireturn
 func setupSQLiteSourceForTest(t *testing.T) SQLSourceInterface {
 	t.Helper()
 
@@ -113,6 +115,16 @@ func setupSQLiteSourceForTest(t *testing.T) SQLSourceInterface {
 }
 
 func TestSQLSourceInterface(t *testing.T) {
+	ctx := context.Background()
+
+	var sqlTestCases = []struct {
+		name  string
+		setup func(t *testing.T) SQLSourceInterface
+	}{
+		{"SQLite", setupSQLiteSourceForTest},
+		{"MySQL", setupMySQLSourceForTest},
+	}
+
 	for _, tc := range sqlTestCases {
 		Convey(fmt.Sprintf("Given a %s connection", tc.name), t, func() {
 			sq := tc.setup(t)
@@ -124,46 +136,46 @@ func TestSQLSourceInterface(t *testing.T) {
 			}
 
 			Convey("You cannot get a non-existent directory", func() {
-				_, err := sq.GetDirectory(1)
+				_, err := sq.GetDirectory(ctx, 1)
 				So(err, ShouldEqual, ErrNoDirectory)
 
-				_, err = sq.SearchDirectory("/path")
+				_, err = sq.SearchDirectory(ctx, "/path")
 				So(err, ShouldEqual, ErrNoDirectory)
 			})
 
 			Convey("You cannot claim a non-existent directory", func() {
-				err := sq.ClaimDirectory(1, "testUser")
+				err := sq.ClaimDirectory(ctx, 1, "testUser")
 				So(err, ShouldEqual, ErrNoDirectory)
 			})
 
 			Convey("You cannot delete a non-existent directory", func() {
-				err := sq.DeleteDirectory(1)
+				err := sq.DeleteDirectory(ctx, 1)
 				So(err, ShouldEqual, ErrNoDirectory)
 			})
 
 			Convey("You cannot update a non-existent rule", func() {
-				err := sq.UpdateRule(1, Rule{})
+				err := sq.UpdateRule(ctx, 1, Rule{})
 				So(err, ShouldEqual, ErrNoRule)
 			})
 
 			Convey("You cannot delete a non-existent rule", func() {
-				err := sq.DeleteRule(1)
+				err := sq.DeleteRule(ctx, 1)
 				So(err, ShouldEqual, ErrNoRule)
 			})
 
 			Convey("You can add a directory", func() {
-				id, err := sq.AddDirectory(directory)
+				id, err := sq.AddDirectory(ctx, directory)
 				So(err, ShouldBeNil)
 				So(id, ShouldBeGreaterThan, 0)
 
 				Convey("You can get a directory", func() {
-					result, err := sq.GetDirectory(id)
+					result, err := sq.GetDirectory(ctx, id) //nolint:govet
 					So(err, ShouldBeNil)
 
 					directory.ID = id
 					So(result, ShouldResemble, &directory)
 
-					result, err = sq.SearchDirectory(directory.Path)
+					result, err = sq.SearchDirectory(ctx, directory.Path)
 					So(err, ShouldBeNil)
 					So(result, ShouldResemble, &directory)
 				})
@@ -174,33 +186,33 @@ func TestSQLSourceInterface(t *testing.T) {
 					directory.Faculty = "test2"
 					directory2.Programme = "test2"
 
-					_, err = sq.AddDirectory(directory2)
+					_, err = sq.AddDirectory(ctx, directory2)
 					So(err, ShouldWrap, ErrDirectoryDuplicate)
 				})
 
 				Convey("You can claim a directory", func() {
-					err = sq.ClaimDirectory(id, "testUser")
+					err = sq.ClaimDirectory(ctx, id, "testUser")
 					So(err, ShouldBeNil)
 
-					result, err := sq.GetDirectory(id)
+					result, err := sq.GetDirectory(ctx, id) //nolint:govet
 					So(err, ShouldBeNil)
 					So(result.ClaimedBy, ShouldEqual, "testUser")
 
 					Convey("You can reclaim a directory", func() {
-						err = sq.ClaimDirectory(id, "testUser2")
+						err = sq.ClaimDirectory(ctx, id, "testUser2")
 						So(err, ShouldBeNil)
 
-						result, err := sq.GetDirectory(id)
+						result, err := sq.GetDirectory(ctx, id)
 						So(err, ShouldBeNil)
 						So(result.ClaimedBy, ShouldEqual, "testUser2")
 					})
 				})
 
 				Convey("You can delete a directory", func() {
-					err = sq.DeleteDirectory(id)
+					err = sq.DeleteDirectory(ctx, id)
 					So(err, ShouldBeNil)
 
-					_, err = sq.GetDirectory(id)
+					_, err = sq.GetDirectory(ctx, id)
 					So(err, ShouldEqual, ErrNoDirectory)
 				})
 
@@ -212,7 +224,7 @@ func TestSQLSourceInterface(t *testing.T) {
 					rule.SetDefaults()
 
 					Convey("You can set a rule for a directory", func() {
-						ruleID, err := sq.SetRule(id, rule)
+						ruleID, err := sq.SetRule(ctx, id, rule)
 						So(err, ShouldBeNil)
 						So(ruleID, ShouldBeGreaterThan, 0)
 
@@ -220,16 +232,16 @@ func TestSQLSourceInterface(t *testing.T) {
 						rule.ReviewAt = rule.ReviewAt.Truncate(24 * time.Hour)
 						rule.DeleteAt = rule.DeleteAt.Truncate(24 * time.Hour)
 
-						result, err := sq.GetDirectory(id)
+						result, err := sq.GetDirectory(ctx, id)
 						So(err, ShouldBeNil)
 						So(result.Rules, ShouldHaveLength, 1)
 						So(result.Rules[0], ShouldResemble, rule)
 
 						Convey("You can delete a rule for a directory", func() {
-							err = sq.DeleteRule(rule.ID)
+							err = sq.DeleteRule(ctx, rule.ID)
 							So(err, ShouldBeNil)
 
-							result, err = sq.GetDirectory(id)
+							result, err = sq.GetDirectory(ctx, id)
 							So(err, ShouldBeNil)
 							So(result.Rules, ShouldHaveLength, 0)
 						})
@@ -237,10 +249,10 @@ func TestSQLSourceInterface(t *testing.T) {
 						Convey("You can update a rule for a directory", func() {
 							rule.BackupType = NoBackup
 
-							err = sq.UpdateRule(rule.ID, rule)
+							err = sq.UpdateRule(ctx, rule.ID, rule)
 							So(err, ShouldBeNil)
 
-							result, err = sq.GetDirectory(id)
+							result, err = sq.GetDirectory(ctx, id)
 							So(err, ShouldBeNil)
 							So(result.Rules, ShouldHaveLength, 1)
 							So(result.Rules[0].BackupType, ShouldResemble, NoBackup)
@@ -252,10 +264,10 @@ func TestSQLSourceInterface(t *testing.T) {
 			Convey("You can add a directory with a claimed user", func() {
 				directory.ClaimedBy = "testUser"
 
-				id, err := sq.AddDirectory(directory)
+				id, err := sq.AddDirectory(ctx, directory)
 				So(err, ShouldBeNil)
 
-				result, err := sq.GetDirectory(id)
+				result, err := sq.GetDirectory(ctx, id)
 				So(err, ShouldBeNil)
 				So(result.ClaimedBy, ShouldEqual, directory.ClaimedBy)
 			})
@@ -268,21 +280,21 @@ func TestSQLSourceInterface(t *testing.T) {
 				rule.SetDefaults()
 
 				Convey("You cannot set a rule for a non-existent directory", func() {
-					_, err := sq.SetRule(1, rule)
+					_, err := sq.SetRule(ctx, 1, rule)
 					So(err, ShouldEqual, ErrNoDirectory)
 				})
 
 				Convey("You can add a directory with a rule", func() {
 					directory.AddRule(rule)
 
-					id, err := sq.AddDirectory(directory)
+					id, err := sq.AddDirectory(ctx, directory)
 					So(err, ShouldBeNil)
 
 					rule.ID = 1
 					rule.ReviewAt = rule.ReviewAt.Truncate(24 * time.Hour)
 					rule.DeleteAt = rule.DeleteAt.Truncate(24 * time.Hour)
 
-					result, err := sq.GetDirectory(id)
+					result, err := sq.GetDirectory(ctx, id)
 					So(err, ShouldBeNil)
 					So(result.Rules, ShouldHaveLength, 1)
 					So(result.Rules[0], ShouldResemble, rule)
