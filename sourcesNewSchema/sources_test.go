@@ -1,6 +1,7 @@
 package sourcesNewSchema
 
 import (
+	"fmt"
 	"testing"
 	"time"
 
@@ -77,5 +78,23 @@ func TestRule(t *testing.T) {
 				tc.check(t, rule)
 			})
 		}
+	})
+}
+
+func TestParseInstruction(t *testing.T) {
+	Convey("You can parse", t, func() {
+		for k, v := range instructionLookup {
+			Convey(fmt.Sprintf("%s instruction", k), func() {
+				term, err := ParseInstruction(k)
+				So(err, ShouldBeNil)
+				So(term, ShouldEqual, v)
+			})
+		}
+	})
+
+	Convey("ParseInstruction will fail on incorrect instruction", t, func() {
+		_, err := ParseInstruction("invalid")
+		So(err, ShouldNotBeNil)
+		So(err, ShouldWrap, ErrWrongInstruction)
 	})
 }

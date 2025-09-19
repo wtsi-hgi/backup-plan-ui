@@ -30,7 +30,9 @@ const selectRulesTmpl = `SELECT
     id, backupType, backupMetadata, backupFrequency, reviewAt, deleteAt, wildcardMatch
 	FROM %s WHERE directoryID = ?
 `
-const updateRuleTmpl = "UPDATE %s SET backupType = ?, backupMetadata = ?, backupFrequency = ?, reviewAt = ?, deleteAt = ? WHERE id = ?"
+const updateRuleTmpl = `UPDATE %s SET 
+	backupType = ?, backupMetadata = ?, backupFrequency = ?, reviewAt = ?, deleteAt = ? WHERE id = ?
+`
 const deleteTmpl = "DELETE FROM %s WHERE id = ?"
 
 const sqlForeignKeyError = "foreign key constraint fail"

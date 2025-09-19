@@ -24,7 +24,8 @@ func usage() {
 	fmt.Println("Convert data from old schema to new schema within MySQL database.")
 	fmt.Println("\nUsage:")
 	fmt.Printf("  %s [--source-table entries] [--dirs-table dirs] [--roles-table roles] [--replace]\n", prog)
-	fmt.Println("\nEnvironment (source mysql): SOURCE_MYSQL_HOST, SOURCE_MYSQL_PORT, SOURCE_MYSQL_USER, SOURCE_MYSQL_PASS, SOURCE_MYSQL_DATABASE")
+	vars := "SOURCE_MYSQL_HOST, SOURCE_MYSQL_PORT, SOURCE_MYSQL_USER, SOURCE_MYSQL_PASS, SOURCE_MYSQL_DATABASE"
+	fmt.Println("\nEnvironment (source mysql): " + vars)
 	fmt.Println("Environment (target mysql): MYSQL_HOST, MYSQL_PORT, MYSQL_USER, MYSQL_PASS, MYSQL_DATABASE")
 	fmt.Println("\nFlags:")
 	flag.PrintDefaults()
