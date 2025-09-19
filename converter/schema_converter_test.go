@@ -32,7 +32,7 @@ func TestConvertEntry(t *testing.T) {
 			Convey("With a default rule", func() {
 				So(directory.Rules, ShouldHaveLength, 1)
 
-				So(directory.Rules[0].BackupType, ShouldEqual, string(entry.Instruction))
+				So(string(directory.Rules[0].BackupType), ShouldEqual, string(entry.Instruction))
 				So(directory.Rules[0].WildcardMatch, ShouldEqual, "*")
 			})
 		})
@@ -46,10 +46,10 @@ func TestConvertEntry(t *testing.T) {
 
 				So(directory.Rules, ShouldHaveLength, 2)
 
-				So(directory.Rules[0].BackupType, ShouldEqual, string(entry.Instruction))
+				So(string(directory.Rules[0].BackupType), ShouldEqual, string(entry.Instruction))
 				So(directory.Rules[0].WildcardMatch, ShouldEqual, "*.sh")
 
-				So(directory.Rules[1].BackupType, ShouldEqual, string(entry.Instruction))
+				So(string(directory.Rules[1].BackupType), ShouldEqual, string(entry.Instruction))
 				So(directory.Rules[1].WildcardMatch, ShouldEqual, "*.txt")
 			})
 		})
@@ -63,13 +63,13 @@ func TestConvertEntry(t *testing.T) {
 
 				So(directory.Rules, ShouldHaveLength, 3)
 
-				So(directory.Rules[0].BackupType, ShouldEqual, string(entry.Instruction))
+				So(string(directory.Rules[0].BackupType), ShouldEqual, string(entry.Instruction))
 				So(directory.Rules[0].WildcardMatch, ShouldEqual, "*")
 
-				So(directory.Rules[1].BackupType, ShouldEqual, string(sources.NoBackup))
+				So(string(directory.Rules[1].BackupType), ShouldEqual, string(sources.NoBackup))
 				So(directory.Rules[1].WildcardMatch, ShouldEqual, "*.sh")
 
-				So(directory.Rules[2].BackupType, ShouldEqual, string(sources.NoBackup))
+				So(string(directory.Rules[2].BackupType), ShouldEqual, string(sources.NoBackup))
 				So(directory.Rules[2].WildcardMatch, ShouldEqual, "*.txt")
 			})
 		})
