@@ -51,6 +51,7 @@ type Entry struct {
 	Requestor     string      `csv:"requestor"`
 	Faculty       string      `csv:"faculty"`
 	ID            uint16      `csv:"id"`
+	Failures      int         `csv:"failures"`
 }
 
 var ErrNoEntry = errors.New("entry does not exist")
